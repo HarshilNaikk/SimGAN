@@ -1,0 +1,36 @@
+main_gail_dyn_ppo.py - (launches the mail training loop (step1 of the algorithm) and sets up the environment)
+    - line 68 - Initialize a vector environment (Multiple environments that train together)
+    - line 71-92 - Define the Simulator parameter function using an actor_critic model.
+                 - SplitPolicy() is basically splitting the contacts and actuators into two actors instead of one actor (which is the case with Policy()).
+                 - The observation space and action space are given by the env defined using make_vec_envs().
+                 - warm_start is probably when you already have a model ready, and then you directly load the file. NOT SURE
+                 - the actor_critic model is then sent to the GPU.
+    - line 94-111 - define a dummy environment and use it to store the source file. 
+    - line 125-137 - Create an RL agent that runs a PPO algorithm to update the Simulator param function defined above.
+    - line 141-178 - Load the expert trajectories collected from the target domain.
+                   - Also, define the Discriminator.
+                   - collect the expert trajectories, and combine them in a train_loader Dataloader varible. 
+    - line 180 - reset gym environment
+    - line 182-189 - define a rollouts variable, which is basically an empty variable that stores observations, rewards, value_predictions, actions and so on. 
+    - line 205 - main loop begins
+               - line 208-212 - Learning rate decay scheduler
+               - line 216-243 - Collecting trajectories from the simulation environment to feed into the discriminator. (This step is basically the generator generating data)
+               - line 248-251 - Compute the next value of the simulator paramter function using current known data.
+               - line 267-268 - Update the discriminator based on divergence between the expert and policy trajectories. Also spews out the loss values. 
+               - line 274-287 - Implements the staying alive policy.
+               - line 298-320 - This block updates the rollouts variable and rewards using the discriminator function.
+               - line 323-326 - computes rewards NOT SURE 
+               - line 330 - updates the simulator parameter function f from thetai to thetai+1 using PPO and the rollouts computed above.It also gives out the value, action and distribution loss. 
+               - line 334 - updates the first value in the rollouts to be the last value (Episode restarts)
+
+Doubts : 
+- main_gail_dyn_ppo.py
+    - line 324 - what is the purpose of the compute_returns function. 
+        - what is gae.
+
+- model_split.py
+    - what is the significance/purpose of base/dist 
+        - base = param function model using actor actor_critic?
+        - dist = behaviour policy definition?
+    - what are the different distribution in the distributions.py used for. They are imported here. 
+

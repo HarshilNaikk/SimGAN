@@ -61,7 +61,7 @@ def main():
     utils.cleanup_log_dir(log_dir)
     utils.cleanup_log_dir(eval_log_dir)
 
-    torch.set_num_threads(1)
+    torch.set_num_threads(4)
     device = torch.device("cuda:0" if args.cuda else "cpu")
     Tensor = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
 
@@ -137,7 +137,8 @@ def main():
         raise ValueError("only support PPO in gail dyn")
 
     assert len(envs.observation_space.shape) == 1
-
+    
+    # Loading the expert trajectories#######################################
     expert_sas_w_past = gan_utils.load_sas_wpast_from_pickle(
         args.gail_traj_path,
         downsample_freq=int(args.gail_downsample_frequency),
@@ -157,6 +158,7 @@ def main():
     # a_idx = np.array([0, 4, 8])
 
     info_length = len(s_idx) * s_dim + len(a_idx) * a_dim + s_dim       # last term s_t+1
+    # Defining the Discriminator 
     discr = gail.Discriminator(
         info_length, args.gail_dis_hdim,
         device)
@@ -173,9 +175,10 @@ def main():
         batch_size=args.gail_batch_size,
         shuffle=True,
         drop_last=drop_last)
+    #####################################################################
 
     obs = envs.reset()
-
+    # Creating empty object to store state,action values#################
     rollouts = RolloutStorage(args.num_steps, args.num_processes,
                               envs.observation_space.shape, envs.action_space,
                               actor_critic.recurrent_hidden_state_size,
@@ -198,14 +201,18 @@ def main():
     from third_party.a2c_ppo_acktr.baselines.common.running_mean_std import RunningMeanStd
     ret_rms = RunningMeanStd(shape=())
 
+    # Start main loop ###############
     while j < num_updates and total_num_episodes < max_num_episodes:
 
+        # Learning rate decay for the main loop
         if args.use_linear_lr_decay:
             # decrease learning rate linearly
             utils.update_linear_schedule(
                 agent.optimizer, j, num_updates,
                 agent.optimizer.lr if args.algo == "acktr" else args.lr)
 
+        ##BEGIN###############################################################
+        # INITALLY COLLECTING TRAJECTORIES FROM CURRENT POLICY FROM THE SIMULATOR 
         for step in range(args.num_steps):
             # print(args.num_steps) 300*8
             # Sample actions
@@ -234,7 +241,10 @@ def main():
                  for info in infos])
             rollouts.insert(obs, recurrent_hidden_states, action,
                             action_log_prob, value, reward, masks, bad_masks, Tensor(sas_feat))
-
+        ##END####################################################################
+    
+        ##BEGIN#################################################################
+        # Getting the next value of the SIMULATOR FUNCTION F
         with torch.no_grad():
             next_value = actor_critic.get_value(
                 rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
@@ -252,9 +262,15 @@ def main():
 
         # use next obs feat batch during update...
         # if j % 2 == 0:
+        
+        # uses the expert trajs and collected trajs to update weights and give loss ###############
         for _ in range(gail_epoch):
             gail_loss, gail_loss_e, gail_loss_p = discr.update_gail_dyn(gail_train_loader, rollouts)
-
+        ##################################################################################
+        
+        ##BEGIN###############################################################################
+        # This block of code is used to implement the staying-alive bonus. 
+        
         num_of_dones = (1.0 - rollouts.masks).sum().cpu().numpy() \
             + args.num_processes / 2
         # print(num_of_dones)
@@ -269,9 +285,16 @@ def main():
             r_sa = 0
         else:
             r_sa = np.log(d_sa) - np.log(1 - d_sa)  # d->1, r->inf
+        ##END###################################################################
 
+
+        ##BEGIN#################################################################
         # use next obs feat to overwrite reward...
         # overwriting rewards by gail
+
+        # This block computes the rewards that are passed onto the generator function (By updating the rollouts variable).
+        # The rewards are computed using the discriminator class.  
+        
         for step in range(args.num_steps):
             rollouts.rewards[step], returns = \
                 discr.predict_reward_combined(
@@ -295,13 +318,22 @@ def main():
             # final returns
             # print(returns)
             gail_rewards.append(torch.mean(returns).cpu().data)
+        ##END####################################################################
 
+        ## COMPUTE_RETURNS FUNCTION ##########################################
         rollouts.compute_returns(next_value, args.use_gae, args.gamma,
                                  args.gae_lambda, not args.no_proper_time_limits)
+        ######################################################################
 
+        # This line updates the simulator parameter function f from thetai to thetai+1 using PPO and the rewards computed
+        # (that were updated in rollouts just above)
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
+        ### AFTER_UPDATE FUNCTION ############################################
+        # This function just updates the first value in multiple arrays to be the last value. (Because the next episode starts from there)
         rollouts.after_update()
+        ######################################################################
+
 
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
