@@ -12,6 +12,7 @@ class System:
         self.A = np.array([[1, 2],[-2, 1]])
         self.B = np.array([[0.5],[1]])
         # self.C = np.array([[1, 0], [0, 1]])
+        # Extra Comment
         # self.D = np.array([[0, 0], [0, 0]])
     
     def step(self, prev_state, cx):
