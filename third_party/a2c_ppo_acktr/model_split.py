@@ -18,7 +18,7 @@
 #  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#  SOFTWARE.
+#  SOFTWARE. 
 
 import numpy as np
 import torch
@@ -35,17 +35,17 @@ class Flatten(nn.Module):
 
 
 class SplitPolicy(nn.Module):
-    def __init__(self, obs_shape, action_space, base_kwargs=None):
+    def __init__(self, obs_shape, num_actions, base_kwargs=None):
         super(SplitPolicy, self).__init__()
         if base_kwargs is None:
             base_kwargs = {}
 
-        num_outputs = action_space.shape[0]
+        num_outputs = num_actions
 
         # self.base = SplitPolicyBase(obs_shape[0], num_outputs, **base_kwargs)
         # self.dist = PlainDiagGaussian(num_outputs)
 
-        self.base = SplitPolicyBaseNew(obs_shape[0], **base_kwargs)     # num_feet not used
+        self.base = SplitPolicyBaseNew(obs_shape, **base_kwargs)     # num_feet not used
         self.dist = StateDiagGaussianNew(num_outputs, **base_kwargs)     # hid size, num feet
 
     @property
@@ -191,7 +191,7 @@ class SplitPolicyBaseNew(nn.Module):
         y1 = self.actor_contact(x)
         y2 = self.actor_actuator(x)
 
-        action_feat = torch.cat((y1, y2), 1)
+        action_feat = torch.cat([y2])
 
         return value, action_feat, rnn_hxs
 
@@ -200,7 +200,7 @@ class StateDiagGaussianNew(nn.Module):
     def __init__(self, num_outputs, hidden_size=64, num_feet=1):
         super(StateDiagGaussianNew, self).__init__()
 
-        assert num_outputs == (4 + 3) * num_feet   # contact 4, act 3
+        # assert num_outputs == (2) * num_feet   # contact 4, act 3
         self.hidden_size = hidden_size
 
         # weight, bias, weight_gain
@@ -214,24 +214,27 @@ class StateDiagGaussianNew(nn.Module):
             lambda x: nn.init.constant_(x, -0.5),
             gain=1.0)
 
-        self.contact_mean = init_mean_(nn.Linear(hidden_size, 4 * num_feet))
-        self.actuator_mean = init_mean_(nn.Linear(hidden_size, 3 * num_feet))
+        # self.contact_mean = init_mean_(nn.Linear(hidden_size, 4 * num_feet))
+        self.actuator_mean = init_mean_(nn.Linear(hidden_size,num_outputs))
+        self.actuator_mean = self.actuator_mean.to(device='cuda')
 
-        self.contact_logstd = init_logstd_(nn.Linear(hidden_size, 4 * num_feet))
-        self.actuator_logstd = init_logstd_(nn.Linear(hidden_size, 3 * num_feet))
+        # self.contact_logstd = init_logstd_(nn.Linear(hidden_size, 4 * num_feet))
+        self.actuator_logstd = init_logstd_(nn.Linear(hidden_size, num_outputs))
+        self.actuator_logstd = self.actuator_logstd.to(device='cuda')
 
     def forward(self, x):
-        contact_feat = x[:, :self.hidden_size]
-        actuator_feat = x[:, self.hidden_size:]
+        # contact_feat = x[:, :self.hidden_size]
+        actuator_feat = x.cuda()
+        # print(np.shape(x))
 
-        contact_mean = self.contact_mean(contact_feat)
-        actuator_mean = self.actuator_mean(actuator_feat)
+        # contact_mean = self.contact_mean(contact_feat)
+        actuator_mean = self.actuator_mean(x)
 
-        contact_logstd = self.contact_logstd(contact_feat)
+        # contact_logstd = self.contact_logstd(contact_feat)
         actuator_logstd = self.actuator_logstd(actuator_feat)
 
-        action_mean = torch.cat((contact_mean, actuator_mean), 1)
-        action_logstd = torch.cat((contact_logstd, actuator_logstd), 1)
+        action_mean = torch.Tensor(actuator_mean.to(device='cpu'))
+        action_logstd = torch.Tensor((actuator_logstd).to(device='cpu'))
 
         return FixedNormal(action_mean, action_logstd.exp())
         # return MultiNormalWrapper(action_mean, scale_tril=torch.diag(action_logstd.exp()))

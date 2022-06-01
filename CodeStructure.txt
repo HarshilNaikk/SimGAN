@@ -30,7 +30,7 @@ Doubts :
 
 - model_split.py
     - what is the significance/purpose of base/dist 
-        - base = param function model using actor actor_critic?
+        - base = param function model using  actor_critic?
         - dist = behaviour policy definition?
     - what are the different distribution in the distributions.py used for. They are imported here. 
 

@@ -136,10 +136,10 @@ class PPO():
                     symmetry_loss = 0
 
                 self.optimizer.zero_grad()
-                (value_loss * self.value_loss_coef
-                 + action_loss
-                 - dist_entropy * self.entropy_coef
-                 + symmetry_loss * self.symmetry_coef).backward()
+                (value_loss.cpu()*self.value_loss_coef
+                 + action_loss.cpu()
+                 - dist_entropy.cpu()* self.entropy_coef
+                 + symmetry_loss* self.symmetry_coef).backward()
                 nn.utils.clip_grad_norm_(self.actor_critic.parameters(),
                                          self.max_grad_norm)
                 self.optimizer.step()

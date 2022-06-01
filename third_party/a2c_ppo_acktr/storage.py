@@ -27,30 +27,31 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, Sequenti
 def _flatten_helper(T, N, _tensor):
     return _tensor.view(T * N, *_tensor.size()[2:])
 
-
+ 
 class RolloutStorage(object):
-    def __init__(self, num_steps, num_processes, obs_shape, action_space,
+    def __init__(self, num_steps, num_processes, obs_shape,
                  recurrent_hidden_state_size, feat_len=0):
-        self.obs = torch.zeros(num_steps + 1, num_processes, *obs_shape)
-        self.obs_feat = torch.zeros(num_steps + 1, num_processes, feat_len)
+        self.obs = torch.zeros(num_steps + 1, int(num_processes), obs_shape)
+        self.obs_feat = torch.zeros(num_steps + 1, int(num_processes), feat_len)
         self.recurrent_hidden_states = torch.zeros(
-            num_steps + 1, num_processes, recurrent_hidden_state_size)
-        self.rewards = torch.zeros(num_steps, num_processes, 1)
-        self.value_preds = torch.zeros(num_steps + 1, num_processes, 1)
-        self.returns = torch.zeros(num_steps + 1, num_processes, 1)
-        self.action_log_probs = torch.zeros(num_steps, num_processes, 1)
-        if action_space.__class__.__name__ == 'Discrete':
-            action_shape = 1
-        else:
-            action_shape = action_space.shape[0]
-        self.actions = torch.zeros(num_steps, num_processes, action_shape)
-        if action_space.__class__.__name__ == 'Discrete':
-            self.actions = self.actions.long()
-        self.masks = torch.ones(num_steps + 1, num_processes, 1)
+            num_steps + 1, int(num_processes), recurrent_hidden_state_size)
+        self.rewards = torch.zeros(num_steps, int(num_processes), 2)
+        self.value_preds = torch.zeros(num_steps + 1, int(num_processes), 2)
+        self.returns = torch.zeros(num_steps + 1, int(num_processes), 2)
+        self.action_log_probs = torch.zeros(num_steps, int(num_processes), 2)
+        self.action_shape = 2
+        # if action_space.__class__.__name__ == 'Discrete':
+        #     action_shape = 1
+        # else:
+        #     action_shape = action_space.shape[0]
+        self.actions = torch.zeros(num_steps, int(num_processes), self.action_shape)
+        # if action_space.__class__.__name__ == 'Discrete':
+        #     self.actions = self.actions.long()
+        self.masks = torch.ones(num_steps + 1, int(num_processes), 2)
 
         # Masks that indicate whether it's a true terminal state
         # or time limit end state
-        self.bad_masks = torch.ones(num_steps + 1, num_processes, 1)
+        self.bad_masks = torch.ones(num_steps + 1, int(num_processes), 2)
 
         self.num_steps = num_steps
         self.step = 0
@@ -69,7 +70,7 @@ class RolloutStorage(object):
 
     def insert(self, obs, recurrent_hidden_states, actions, action_log_probs,
                value_preds, rewards, masks, bad_masks, obs_feat=None):
-        self.obs[self.step + 1].copy_(obs)
+        self.obs[self.step + 1][0].copy_(obs)
         if obs_feat is not None:
             self.obs_feat[self.step + 1].copy_(obs_feat)
         self.recurrent_hidden_states[self.step +
@@ -95,6 +96,7 @@ class RolloutStorage(object):
 
     def after_update(self):
         self.obs[0].copy_(self.obs[-1])
+        # print(self.obs[-1])
         self.obs_feat[0].copy_(self.obs_feat[-1])
         self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
         self.masks[0].copy_(self.masks[-1])
@@ -188,7 +190,7 @@ class RolloutStorage(object):
             # print("preobs", obs_batch[5::num_processes])
             # print("afterobs", next_obs_batch[5::num_processes])
             yield obs_batch, recurrent_hidden_states_batch, actions_batch, \
-                  value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ, \
+                  value_preds_batch,return_batch, masks_batch, old_action_log_probs_batch, adv_targ, \
                   obs_feat_batch, next_obs_feat_batch           # last two only for gail-dyn
 
     def recurrent_generator(self, advantages, num_mini_batch):
