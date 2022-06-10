@@ -88,13 +88,13 @@ class Discriminator(nn.Module):
         grad_pen = lambda_ * (grad.norm(2, dim=1) - 1).pow(2).mean()
         return grad_pen
 
-    def update(self, expert_loader, rollouts, obsfilt=None, is_gail_dyn=False, a_dim=None):
+    def update(self, expert_loader, rollouts, obsfilt=None, is_gail_dyn=False, a_dim=None, paramsdata = None):
         # if is_gail_dyn, the policy is a dynamics model to be learned
         # if is_gail_dyn, s_dim should be an int storing original state dimension (wo act)
         self.train()
 
         policy_data_generator = rollouts.feed_forward_generator(
-            None, mini_batch_size=expert_loader.batch_size)
+            None, mini_batch_size=expert_loader.batch_size, paramsdata=None)
 
         loss = expert_loss_t = policy_loss_t = 0
         n = 0
@@ -159,11 +159,23 @@ class Discriminator(nn.Module):
 
         loss = expert_loss_t = policy_loss_t = 0
         n = 0
+        paramserror1 = []
+        paramserror2 = []
         for expert_batch, policy_batch in zip(expert_loader,
                                               policy_data_generator):
+            print(np.shape(expert_batch))
+            print(np.shape(policy_batch))
 
             expert_data = expert_batch[0]
-            policy_data = policy_batch[-1]      # see feed_forward_generator yield
+            policy_data = policy_batch[-2]      # see feed_forward_generator yield
+            indices = policy_batch[-1]
+            print("INDICES = " + str(indices))
+
+            # actions = policy_batch[2]
+            batch_error = (np.array(expert_data.cpu()) - np.array(policy_data.cpu()))[:,0:2]
+            print("BATCHERROR1 = " + str((batch_error)))
+            paramserror1.append(np.mean(batch_error[:,0]))
+            paramserror2.append(np.mean(batch_error[:,1]))
 
             policy_d = self.trunk(policy_data)
             expert_d = self.trunk(expert_data)
@@ -174,6 +186,9 @@ class Discriminator(nn.Module):
             policy_loss = F.binary_cross_entropy_with_logits(
                 policy_d,
                 torch.zeros(policy_d.size()).to(self.device))
+            gen_loss = F.binary_cross_entropy_with_logits(
+                policy_d,
+                torch.ones(expert_d.size()).to(self.device))
 
             gail_loss = expert_loss + policy_loss
             grad_pen = self.compute_grad_pen_combined(expert_data, policy_data)
@@ -190,7 +205,7 @@ class Discriminator(nn.Module):
             # # TODO: Clip weights of discriminator
             # for p in self.trunk.parameters():
             #     p.data.clamp_(-0.1, 0.1)
-        return loss / n, expert_loss_t / n, policy_loss_t / n
+        return loss / n, expert_loss_t / n, policy_loss_t / n, gen_loss/n #paramserror1, paramserror2
 
     def predict_reward(self, state, action, gamma, masks, offset=0.0):
         with torch.no_grad():

@@ -70,7 +70,7 @@ class RolloutStorage(object):
 
     def insert(self, obs, recurrent_hidden_states, actions, action_log_probs,
                value_preds, rewards, masks, bad_masks, obs_feat=None):
-        self.obs[self.step + 1][0].copy_(obs)
+        self.obs[self.step + 1].copy_(obs)
         if obs_feat is not None:
             self.obs_feat[self.step + 1].copy_(obs_feat)
         self.recurrent_hidden_states[self.step +
@@ -146,7 +146,8 @@ class RolloutStorage(object):
     def feed_forward_generator(self,
                                advantages,
                                num_mini_batch=None,
-                               mini_batch_size=None):
+                               mini_batch_size=None,
+                               paramsdata = None):
         num_steps, num_processes = self.rewards.size()[0:2]
         batch_size = num_processes * num_steps
 
@@ -162,12 +163,15 @@ class RolloutStorage(object):
             SubsetRandomSampler(range(batch_size)),
             mini_batch_size,
             drop_last=True)
+        
         # sampler = BatchSampler(
         #     SequentialSampler(range(batch_size)),
         #     mini_batch_size,
         #     drop_last=True)
 
         for indices in sampler:
+            if paramsdata is not None:
+                params = paramsdata[indices]
             obs_batch = self.obs[:-1].view(-1, *self.obs.size()[2:])[indices]
             next_obs_batch = self.obs[1:].view(-1, *self.obs.size()[2:])[indices]
             obs_feat_batch = self.obs_feat[:-1].view(-1, *self.obs_feat.size()[2:])[indices]
@@ -186,12 +190,12 @@ class RolloutStorage(object):
             else:
                 adv_targ = advantages.view(-1, 1)[indices]
 
-            # print("ind", indices)
+            print("ind", indices)
             # print("preobs", obs_batch[5::num_processes])
             # print("afterobs", next_obs_batch[5::num_processes])
             yield obs_batch, recurrent_hidden_states_batch, actions_batch, \
                   value_preds_batch,return_batch, masks_batch, old_action_log_probs_batch, adv_targ, \
-                  obs_feat_batch, next_obs_feat_batch           # last two only for gail-dyn
+                  obs_feat_batch, next_obs_feat_batch, indices           # last two only for gail-dyn
 
     def recurrent_generator(self, advantages, num_mini_batch):
         num_processes = self.rewards.size(1)
