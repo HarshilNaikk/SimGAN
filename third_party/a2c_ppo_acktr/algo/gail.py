@@ -163,22 +163,25 @@ class Discriminator(nn.Module):
         paramserror2 = []
         for expert_batch, policy_batch in zip(expert_loader,
                                               policy_data_generator):
-            print(np.shape(expert_batch))
-            print(np.shape(policy_batch))
+            # print(np.shape(expert_batch))
+            # print(np.shape(policy_batch))
 
             expert_data = expert_batch[0]
+            # print("YE SIZE CHAHIYE = " + str(np.shape(expert_data)))
             policy_data = policy_batch[-2]      # see feed_forward_generator yield
             indices = policy_batch[-1]
-            print("INDICES = " + str(indices))
+            # print("INDICES = " + str(indices))
 
             # actions = policy_batch[2]
             batch_error = (np.array(expert_data.cpu()) - np.array(policy_data.cpu()))[:,0:2]
-            print("BATCHERROR1 = " + str((batch_error)))
+            # print("BATCHERROR1 = " + str((batch_error)))
             paramserror1.append(np.mean(batch_error[:,0]))
             paramserror2.append(np.mean(batch_error[:,1]))
 
             policy_d = self.trunk(policy_data)
             expert_d = self.trunk(expert_data)
+            print("POLICY_D = " +str(policy_d))
+            print("EXPERT_D = " +str(expert_d))
 
             expert_loss = F.binary_cross_entropy_with_logits(
                 expert_d,

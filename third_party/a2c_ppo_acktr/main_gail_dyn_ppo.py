@@ -51,22 +51,23 @@ TRAJECTORY_LOAD_PATH1="./data/data/"
 TRAJECTORY_LOAD_PATH2= "./data/parameters"
 # TRAJECTORY_LENGTH = 30
 TRAJECTORIES_NUM = 20 # MAX 90 
-BATCH_SIZE = 1
+BATCH_SIZE = 4
 # HIDDEN_SIZE = 16
 # EPOCHS = 1000
 SEED = 100
-NUM_MINI_BATCH = 8
+NUM_MINI_BATCH = 4
 ENTROPY_COEF = 0
-LR = 2*1e-5
-GAIL_DIS_HDIM = 16
+LR = 1*1e-8
+GAIL_DIS_HDIM = 64
 GAIL_TRAJ_NUM = 10
 GAIL_DOWNSAMPLE_FREQUENCY = 1
 GAIL_EPOCH = 5
 NUM_STEPS = 10
 NUM_PROCESSES = 1
-NUM_ENV_STEPS = 100000
+NUM_ENV_STEPS = 10000
 NUM_EPISODES = 50
 CUDA = 1
+TEST_NUM_STEPS = 10
 
 sys.path.append("third_party")
 np.set_printoptions(precision=2, suppress=None, threshold=sys.maxsize)
@@ -188,7 +189,7 @@ def main():
     gaillossp = []
     gaillosse = []
     genloss = []
-    fig, axs = plt.subplots(2 , 2)
+    fig, axs = plt.subplots(2 , 3)
     # fig2, axs2 = plt.subplots(2 , 1)
 
     while j < num_updates and total_num_episodes < max_num_episodes:
@@ -201,16 +202,17 @@ def main():
                 agent.optimizer.lr if args.algo == "acktr" else LR)
         errorcxexpert = []
         paramsarr = []
+        action_logstd_arr = []
         # obs = Tensor(system.generate_initial_obs())
         # rollouts.obs[0][0].copy_(obs)
         # rollouts.to(device) 
         # INITALLY COLLECTING TRAJECTORIES FROM CURRENT POLICY FROM THE SIMULATOR 
         for step in range(NUM_STEPS):
             with torch.no_grad():
-                value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
+                value, action, action_log_prob, recurrent_hidden_states, action_logstd = actor_critic.act(
                     rollouts.obs[step], rollouts.recurrent_hidden_states[step],
                     rollouts.masks[step])
-            
+            action_logstd_arr.append([np.array(action_logstd[0][0]), np.array(action_logstd[0][1])])
             done1 = 1
             done2 = 1
 
@@ -273,8 +275,11 @@ def main():
             r_sa = np.log(d_sa) - np.log(1 - d_sa)  # d->1, r->inf
         # gailloss.append(r_sa)
         experttrajnorm = np.linalg.norm(xcommau[:,0:2], 2)
-        print("L2 NORM OF THE EXPERT TRAJECTORY = " + str(experttrajnorm))
+        # # print("L2 NORM OF THE EXPERT TRAJECTORY = " + str(experttrajnorm))
 
+        # # print("THE DISCRIMINATOR PROBABILITY IS HERE : ")
+        # discprob = discr.trunk(rollouts.obs)
+        # print(discprob)
         for step in range(NUM_STEPS):
             rollouts.rewards[step], returns = \
                 discr.predict_reward_combined(
@@ -311,6 +316,21 @@ def main():
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
         
         # rollouts.after_update()
+        # save for every interval-th episode or for the last epoch
+        # if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
+        #     torch.save([
+        #         actor_critic,
+        #         getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
+        #     ], os.path.join(save_path, args.env_name + ".pt"))
+
+        #     torch.save([
+        #         actor_critic,
+        #         getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
+        #     ], os.path.join(save_path, args.env_name + "_" + str(j) + ".pt"))
+
+        #     if args.gail:
+        #         torch.save(discr, os.path.join(save_path, args.env_name + "_D.pt"))
+        #         torch.save(discr, os.path.join(save_path, args.env_name + "_" + str(j) + "_D.pt"))
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * NUM_PROCESSES * NUM_STEPS
@@ -343,27 +363,31 @@ def main():
         position1 = rollouts.obs[:,0,0]
         position2 = rollouts.obs[:,0,1]
 
-        print((position1).shape)
+        # print((position1).shape)
         l_to_show = position1.shape
 
         # axs[0].set_xlim([-50, 50])
         plt.ylim([-50, 50])
         # axs[1].set_xlim([-5, 5])
         # axs.set_ylim([-50, 50])
+        print(action_logstd_arr)
         axs[0][0].cla()
         axs[0][1].cla()
         axs[1][0].cla()
         axs[1][1].cla()
+        axs[1][2].cla()
         axs[0][0].plot(gaillossp,color='blue', label='GAIL_LOSS_P')
         axs[0][0].plot(gaillosse, color='red', label='GAIL_LOSS_E')
         axs[0][0].plot(gailloss, color='green', label='GAIL_LOSS')
         axs[0][0].plot(genloss, color='black', label="GEN_LOSS")
         axs[1][0].plot(position1.cpu().numpy(), color='red', label='Predicted')
+        axs[1][2].plot(np.array(np.array(action_logstd_arr)[:,0]))
+        axs[1][2].plot(np.array(np.array(action_logstd_arr)[:,1]))
         for i in range(19):
-            axs[1][0].plot(xcommau[40*i:40*(i+1),0], color='blue')
+            axs[1][0].plot(xcommau[20*i:20*(i+1),0], color='blue')
         axs[1][1].plot(position2.cpu().numpy(), color='red')
         for i in range(19):
-            axs[1][1].plot(xcommau[40*i:40*(i+1),1], color='blue')
+            axs[1][1].plot(xcommau[20*i:20*(i+1),1], color='blue')
         # # axs[0].plot(valuelossarr)
         # axs[1].plot(gailloss)
         axs[0][0].set_title("GAIL LOSS")
@@ -387,6 +411,67 @@ def main():
     # axs2[0].plot(gailloss, color='green', label='GAIL_LOSS')
     # axs2[0].plot(genloss, color='black', label="GEN_LOSS")
         
+    # plt.show()
+
+    print("-----------------------------------------")
+    print("TESTING TRAINED DYNAMICS MODEL COMMENCES HERE")
+    # From here, we initiate a starting state, and just simulate trajectories with the trained dynamics as well as the expert dynamics.
+
+    stateerrorarr1 = []
+    stateerrorarr2 = []
+    actionerrorarr = []
+
+    for k in range(100):
+        obs = Tensor(system.generate_initial_obs())
+        print("Initial Obs = " + str(obs))
+
+        experttraj = np.zeros((TEST_NUM_STEPS, 3))
+        controlinputs = []
+
+        # Generating Expert Trajectory
+        initialobs = obs.cpu()
+        for step in range(TEST_NUM_STEPS):
+            experttraj[step] = np.array(initialobs)
+            initialstate = (initialobs[0:2])
+            initialstate = torch.Tensor(initialstate).cuda()
+            next_state, next_obs, _ = system.step(initialstate, None)
+            controlinputs.append(np.array(next_obs[2]))
+            initialobs = next_obs
+
+        simulatedtraj = np.zeros((TEST_NUM_STEPS, 3))
+
+        print("Done with the Expert Trajectories")
+        # Generating Simulated Trajectory
+        initialobs = obs.cpu()
+        initialobs = Tensor(initialobs.to(device='cuda'))
+        for step in range(TEST_NUM_STEPS):
+            simulatedtraj[step] = np.array(initialobs.cpu())
+            initialstate = (initialobs[0:2])
+            value, action, _, _, _ = actor_critic.act(
+                        initialobs, GAIL_DIS_HDIM,
+                        np.array([False, False]))
+            action = action[np.newaxis, :]
+            next_state, next_obs, _ = system.step_with_predefined_actions(initialstate, controlinputs[step], action)
+            initialobs = Tensor(next_obs)
+
+        #Calculating difference in the trajectory states and trajectory actions
+        trajerror = simulatedtraj - experttraj
+        statenorm1 = np.linalg.norm((trajerror[:,0]), 2)/TEST_NUM_STEPS
+        statenorm2 = np.linalg.norm((trajerror[:,1]), 2)/TEST_NUM_STEPS
+        statenorm = np.linalg.norm((trajerror[:,0:2]), 2)/TEST_NUM_STEPS
+        actionnorm = np.linalg.norm(trajerror[:,2], 2)/TEST_NUM_STEPS
+
+        stateerrorarr1.append(statenorm1)
+        stateerrorarr2.append(statenorm2)
+        actionerrorarr.append(actionnorm)
+        axs[0][1].cla()
+        axs[0][1].plot(simulatedtraj[:,1], color='red', label='Simulated Traj')
+        axs[0][1].plot(experttraj[:,1],color='blue', label="Expert Traj" )
+        plt.pause(0.005)
+
+    axs[0][2].boxplot([stateerrorarr1, stateerrorarr2])
+    # axs[0][2].boxplot(stateerrorarr2)
+    plt.legend()
     plt.show()
 
 

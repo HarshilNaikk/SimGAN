@@ -67,7 +67,7 @@ class SplitPolicy(nn.Module):
 
     def act(self, inputs, rnn_hxs, masks, deterministic=False):
         value, actor_mean, rnn_hxs = self.base(inputs, rnn_hxs, masks)
-        dist = self.dist(actor_mean)
+        dist, action_logstd = self.dist(actor_mean)
 
         if deterministic:
             action = dist.mode()
@@ -77,7 +77,7 @@ class SplitPolicy(nn.Module):
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
 
-        return value, action, action_log_probs, rnn_hxs
+        return value, action, action_log_probs, rnn_hxs, action_logstd
 
     def get_value(self, inputs, rnn_hxs, masks):
         value, _, _ = self.base(inputs, rnn_hxs, masks)
@@ -85,12 +85,12 @@ class SplitPolicy(nn.Module):
 
     def evaluate_actions(self, inputs, rnn_hxs, masks, action):
         value, actor_mean, rnn_hxs = self.base(inputs, rnn_hxs, masks)
-        dist = self.dist(actor_mean)
+        dist, action_logstd = self.dist(actor_mean)
 
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
 
-        return value, action_log_probs, dist_entropy, rnn_hxs
+        return value, action_log_probs, dist_entropy, rnn_hxs, action_logstd
 
 
 class SplitPolicyBase(nn.Module):
@@ -236,5 +236,5 @@ class StateDiagGaussianNew(nn.Module):
         action_mean = torch.Tensor(actuator_mean.to(device='cpu'))
         action_logstd = torch.Tensor((actuator_logstd).to(device='cpu'))
 
-        return FixedNormal(action_mean, action_logstd.exp())
+        return FixedNormal(action_mean, action_logstd.exp()), action_logstd
         # return MultiNormalWrapper(action_mean, scale_tril=torch.diag(action_logstd.exp()))

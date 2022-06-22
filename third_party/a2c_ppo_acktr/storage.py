@@ -190,7 +190,7 @@ class RolloutStorage(object):
             else:
                 adv_targ = advantages.view(-1, 1)[indices]
 
-            print("ind", indices)
+            # print("ind", indices)
             # print("preobs", obs_batch[5::num_processes])
             # print("afterobs", next_obs_batch[5::num_processes])
             yield obs_batch, recurrent_hidden_states_batch, actions_batch, \
