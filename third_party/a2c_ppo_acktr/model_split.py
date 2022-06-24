@@ -84,9 +84,12 @@ class SplitPolicy(nn.Module):
         return value
 
     def evaluate_actions(self, inputs, rnn_hxs, masks, action):
+        inputs = inputs.cuda()
+        rnn_hxs = rnn_hxs.cuda()
+        masks = masks.cuda()
         value, actor_mean, rnn_hxs = self.base(inputs, rnn_hxs, masks)
         dist, action_logstd = self.dist(actor_mean)
-
+        action = action.to(device='cuda')
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
 
@@ -236,5 +239,5 @@ class StateDiagGaussianNew(nn.Module):
         action_mean = torch.Tensor(actuator_mean.to(device='cpu'))
         action_logstd = torch.Tensor((actuator_logstd).to(device='cpu'))
 
-        return FixedNormal(action_mean, action_logstd.exp()), action_logstd
+        return FixedNormal(action_mean, action_logstd.exp()), action_logstd.exp()
         # return MultiNormalWrapper(action_mean, scale_tril=torch.diag(action_logstd.exp()))

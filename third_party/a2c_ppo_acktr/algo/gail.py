@@ -161,6 +161,8 @@ class Discriminator(nn.Module):
         n = 0
         paramserror1 = []
         paramserror2 = []
+        merror = 0
+        verror = 0
         for expert_batch, policy_batch in zip(expert_loader,
                                               policy_data_generator):
             # print(np.shape(expert_batch))
@@ -169,6 +171,14 @@ class Discriminator(nn.Module):
             expert_data = expert_batch[0]
             # print("YE SIZE CHAHIYE = " + str(np.shape(expert_data)))
             policy_data = policy_batch[-2]      # see feed_forward_generator yield
+            print(expert_data, policy_data)
+
+            expertvarmean = torch.var_mean(expert_data)
+            policyvarmean = torch.var_mean(policy_data)
+
+            merror += (expertvarmean[1] - policyvarmean[1])
+            verror += (expertvarmean[0] - policyvarmean[0])
+            
             indices = policy_batch[-1]
             # print("INDICES = " + str(indices))
 
@@ -208,7 +218,7 @@ class Discriminator(nn.Module):
             # # TODO: Clip weights of discriminator
             # for p in self.trunk.parameters():
             #     p.data.clamp_(-0.1, 0.1)
-        return loss / n, expert_loss_t / n, policy_loss_t / n, gen_loss/n #paramserror1, paramserror2
+        return loss / n, expert_loss_t / n, policy_loss_t / n, gen_loss/n, merror/n, verror/n
 
     def predict_reward(self, state, action, gamma, masks, offset=0.0):
         with torch.no_grad():

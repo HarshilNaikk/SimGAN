@@ -51,23 +51,23 @@ TRAJECTORY_LOAD_PATH1="./data/data/"
 TRAJECTORY_LOAD_PATH2= "./data/parameters"
 # TRAJECTORY_LENGTH = 30
 TRAJECTORIES_NUM = 20 # MAX 90 
-BATCH_SIZE = 4
+BATCH_SIZE = 8
 # HIDDEN_SIZE = 16
 # EPOCHS = 1000
-SEED = 100
-NUM_MINI_BATCH = 4
+SEED = np.random.random()
+NUM_MINI_BATCH = 8
 ENTROPY_COEF = 0
-LR = 1*1e-8
+LR = 5*1e-8
 GAIL_DIS_HDIM = 64
 GAIL_TRAJ_NUM = 10
 GAIL_DOWNSAMPLE_FREQUENCY = 1
-GAIL_EPOCH = 5
-NUM_STEPS = 10
+GAIL_EPOCH = 10
+NUM_STEPS = 20
 NUM_PROCESSES = 1
 NUM_ENV_STEPS = 10000
 NUM_EPISODES = 50
 CUDA = 1
-TEST_NUM_STEPS = 10
+TEST_NUM_STEPS = 20
 
 sys.path.append("third_party")
 np.set_printoptions(precision=2, suppress=None, threshold=sys.maxsize)
@@ -189,7 +189,9 @@ def main():
     gaillossp = []
     gaillosse = []
     genloss = []
-    fig, axs = plt.subplots(2 , 3)
+    merrorarr = []
+    verrorarr = []
+    fig, axs = plt.subplots(2 , 4)
     # fig2, axs2 = plt.subplots(2 , 1)
 
     while j < num_updates and total_num_episodes < max_num_episodes:
@@ -250,9 +252,11 @@ def main():
         # x2arr = []
 
         for _ in range(gail_epoch):
-            gail_loss, gail_loss_e, gail_loss_p, gen_loss = discr.update_gail_dyn(gail_train_loader, rollouts)
+            gail_loss, gail_loss_e, gail_loss_p, gen_loss, merror, verror = discr.update_gail_dyn(gail_train_loader, rollouts)
             # x1arr.append(paramserror1)
             # x2arr.append(paramserror2)
+            merrorarr.append(float(merror))
+            verrorarr.append(float(verror))
             gaillosse.append(gail_loss_e)
             gaillossp.append(gail_loss_p)
             gailloss.append(gail_loss)
@@ -376,6 +380,9 @@ def main():
         axs[1][0].cla()
         axs[1][1].cla()
         axs[1][2].cla()
+        axs[1][0].set_title("X1 (Sim. vs Exp.")
+        axs[1][1].set_title("X2 (Sim. vs Exp.")
+        axs[1][2].set_title("Var. of C")
         axs[0][0].plot(gaillossp,color='blue', label='GAIL_LOSS_P')
         axs[0][0].plot(gaillosse, color='red', label='GAIL_LOSS_E')
         axs[0][0].plot(gailloss, color='green', label='GAIL_LOSS')
@@ -451,7 +458,8 @@ def main():
                         initialobs, GAIL_DIS_HDIM,
                         np.array([False, False]))
             action = action[np.newaxis, :]
-            next_state, next_obs, _ = system.step_with_predefined_actions(initialstate, controlinputs[step], action)
+            # next_state, next_obs, _ = system.step_with_predefined_actions(initialstate, controlinputs[step+1], action)
+            next_state, next_obs, _ = system.step(initialstate, action)
             initialobs = Tensor(next_obs)
 
         #Calculating difference in the trajectory states and trajectory actions
@@ -465,12 +473,20 @@ def main():
         stateerrorarr2.append(statenorm2)
         actionerrorarr.append(actionnorm)
         axs[0][1].cla()
+        axs[0][1].set_title("SIM. Vs. EXP. TRAJ.")
         axs[0][1].plot(simulatedtraj[:,1], color='red', label='Simulated Traj')
         axs[0][1].plot(experttraj[:,1],color='blue', label="Expert Traj" )
         plt.pause(0.005)
-
+    axs[0][2].set_title("x1 and x2 ERR. (Sim. vs. Exp.")
     axs[0][2].boxplot([stateerrorarr1, stateerrorarr2])
-    # axs[0][2].boxplot(stateerrorarr2)
+    axs[0][3].set_title("Mean Err. - Distr. (Sim. vs. Exp.")
+    axs[1][3].set_title("Var Err. - Distr. (Sim. vs Exp.")
+    merrorarr = np.array(merrorarr)
+    verrorarr = np.array(verrorarr)
+    # print(merrorarr)
+    # print(verrorarr)
+    axs[0][3].boxplot(merrorarr)
+    axs[1][3].boxplot(verrorarr)
     plt.legend()
     plt.show()
 
