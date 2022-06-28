@@ -173,11 +173,11 @@ class Discriminator(nn.Module):
             policy_data = policy_batch[-2]      # see feed_forward_generator yield
             print(expert_data, policy_data)
 
-            expertvarmean = torch.var_mean(expert_data)
-            policyvarmean = torch.var_mean(policy_data)
+            # expertvarmean = torch.var_mean(expert_data)
+            # policyvarmean = torch.var_mean(policy_data)
 
-            merror += (expertvarmean[1] - policyvarmean[1])
-            verror += (expertvarmean[0] - policyvarmean[0])
+            # merror += (expertvarmean[1] - policyvarmean[1])
+            # verror += (expertvarmean[0] - policyvarmean[0])
             
             indices = policy_batch[-1]
             # print("INDICES = " + str(indices))

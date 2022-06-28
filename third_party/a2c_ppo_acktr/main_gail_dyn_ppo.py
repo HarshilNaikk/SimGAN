@@ -51,23 +51,51 @@ TRAJECTORY_LOAD_PATH1="./data/data/"
 TRAJECTORY_LOAD_PATH2= "./data/parameters"
 # TRAJECTORY_LENGTH = 30
 TRAJECTORIES_NUM = 20 # MAX 90 
-BATCH_SIZE = 8
+BATCH_SIZE = 1
 # HIDDEN_SIZE = 16
 # EPOCHS = 1000
 SEED = np.random.random()
-NUM_MINI_BATCH = 8
+NUM_MINI_BATCH = 16
 ENTROPY_COEF = 0
 LR = 5*1e-8
 GAIL_DIS_HDIM = 64
 GAIL_TRAJ_NUM = 10
 GAIL_DOWNSAMPLE_FREQUENCY = 1
-GAIL_EPOCH = 10
+GAIL_EPOCH = 5
 NUM_STEPS = 20
 NUM_PROCESSES = 1
-NUM_ENV_STEPS = 10000
+NUM_ENV_STEPS = 500
 NUM_EPISODES = 50
 CUDA = 1
 TEST_NUM_STEPS = 20
+TEST_NUM_TRAJS = 100
+
+import pybullet as p
+import matplotlib.pyplot as plt
+
+from third_party.gym_pybullet_drones.utils.enums import DroneModel, Physics
+from third_party.gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
+from third_party.gym_pybullet_drones.envs.VisionAviary import VisionAviary
+from third_party.gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
+from third_party.gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
+from third_party.gym_pybullet_drones.utils.Logger import Logger
+from third_party.gym_pybullet_drones.utils.utils import sync, str2bool
+
+DEFAULT_DRONES = DroneModel("cf2x")
+DEFAULT_NUM_DRONES = 3
+DEFAULT_PHYSICS = Physics("pyb")
+DEFAULT_VISION = False
+DEFAULT_GUI = True
+DEFAULT_RECORD_VISION = False
+DEFAULT_PLOT = True
+DEFAULT_USER_DEBUG_GUI = False
+DEFAULT_AGGREGATE = True
+DEFAULT_OBSTACLES = True
+DEFAULT_SIMULATION_FREQ_HZ = 240
+DEFAULT_CONTROL_FREQ_HZ = 48
+DEFAULT_DURATION_SEC = 12
+DEFAULT_OUTPUT_FOLDER = 'results'
+DEFAULT_COLAB = False
 
 sys.path.append("third_party")
 np.set_printoptions(precision=2, suppress=None, threshold=sys.maxsize)
@@ -86,6 +114,45 @@ def main():
     sasdata = np.zeros((np.shape(xcommau)[0], np.shape(xcommau)[1] + 2))
     for i in range(np.shape(xcommau)[0]-1):
         sasdata[i, :] = np.concatenate((xcommau[i], np.array([xcommau[i+1,0]]), np.array([xcommau[i+1,1]])))
+
+    # # Initialize the Simulation
+    # H = .1
+    # H_STEP = .05
+    # R = .3
+    # INIT_XYZS = np.array([[R*np.cos((i/6)*2*np.pi+np.pi/2), R*np.sin((i/6)*2*np.pi+np.pi/2)-R, H+i*H_STEP] for i in range(DEFAULT_NUM_DRONES)])
+    # INIT_RPYS = np.array([[0, 0,  i * (np.pi/2)/DEFAULT_NUM_DRONES] for i in range(DEFAULT_NUM_DRONES)])
+    # AGGR_PHY_STEPS = int(DEFAULT_SIMULATION_FREQ_HZ/DEFAULT_CONTROL_FREQ_HZ) if DEFAULT_AGGREGATE else 1
+
+    # env = CtrlAviary(drone_model=DEFAULT_DRONES,
+    #                      num_drones=DEFAULT_NUM_DRONES,
+    #                      initial_xyzs=INIT_XYZS,
+    #                      initial_rpys=INIT_RPYS,
+    #                      physics=DEFAULT_PHYSICS,
+    #                      neighbourhood_radius=10,
+    #                      freq=DEFAULT_SIMULATION_FREQ_HZ,
+    #                      aggregate_phy_steps=AGGR_PHY_STEPS,
+    #                      gui=DEFAULT_GUI,
+    #                      record=DEFAULT_RECORD_VISION,
+    #                      obstacles=DEFAULT_OBSTACLES,
+    #                      user_debug_gui=DEFAULT_USER_DEBUG_GUI
+    #                      )
+
+    # #### Obtain the PyBullet Client ID from the environment ####
+    # PYB_CLIENT = env.getPyBulletClient()
+
+    # #### Initialize the logger #################################
+    # logger = Logger(logging_freq_hz=int(DEFAULT_SIMULATION_FREQ_HZ/AGGR_PHY_STEPS),
+    #                 num_drones=DEFAULT_NUM_DRONES,
+    #                 output_folder=DEFAULT_OUTPUT_FOLDER,
+    #                 colab=DEFAULT_COLAB
+    #                 )
+
+    # #### Initialize the controllers ############################
+    # if DEFAULT_DRONES in [DroneModel.CF2X, DroneModel.CF2P]:
+    #     ctrl = [DSLPIDControl(drone_model=DEFAULT_DRONES) for i in range(DEFAULT_NUM_DRONES)]
+    # elif DEFAULT_DRONES in [DroneModel.HB]:
+    #     ctrl = [SimplePIDControl(drone_model=DEFAULT_DRONES) for i in range(DEFAULT_NUM_DRONES)]
+    
     
     sasdata = sasdata[:-1]
     print(np.shape(sasdata))
@@ -226,9 +293,9 @@ def main():
             paramsarr.append(action.cpu().numpy())
 
             sas_feat = torch.cat((rollouts.obs[step][0], next_state[:,0])) #Tensor(np.concatenate(np.array(obs),np.array(next_state)))
-            if (next_state[0] < 30 and next_state[0] > -30) and np.abs(next_obs[2].cpu().numpy()) < 50:
+            if (next_state[0] < 15 and next_state[0] > -15) and np.abs(next_obs[2].cpu().numpy()) < 30:
                 done1 = 0
-            if (next_state[1] < 30 and next_state[1] > -30) and np.abs(next_obs[2].cpu().numpy()) < 50:
+            if (next_state[1] < 15 and next_state[1] > -15) and np.abs(next_obs[2].cpu().numpy()) < 30:
                 done2 = 0
 
             masks = Tensor(
@@ -382,14 +449,11 @@ def main():
         axs[1][2].cla()
         axs[1][0].set_title("X1 (Sim. vs Exp.")
         axs[1][1].set_title("X2 (Sim. vs Exp.")
-        axs[1][2].set_title("Var. of C")
         axs[0][0].plot(gaillossp,color='blue', label='GAIL_LOSS_P')
         axs[0][0].plot(gaillosse, color='red', label='GAIL_LOSS_E')
         axs[0][0].plot(gailloss, color='green', label='GAIL_LOSS')
         axs[0][0].plot(genloss, color='black', label="GEN_LOSS")
         axs[1][0].plot(position1.cpu().numpy(), color='red', label='Predicted')
-        axs[1][2].plot(np.array(np.array(action_logstd_arr)[:,0]))
-        axs[1][2].plot(np.array(np.array(action_logstd_arr)[:,1]))
         for i in range(19):
             axs[1][0].plot(xcommau[20*i:20*(i+1),0], color='blue')
         axs[1][1].plot(position2.cpu().numpy(), color='red')
@@ -427,8 +491,13 @@ def main():
     stateerrorarr1 = []
     stateerrorarr2 = []
     actionerrorarr = []
+    expertcxarray = []
+    simulatedcxarray = []
+    simulatedstepcxarr = np.zeros((TEST_NUM_STEPS, TEST_NUM_TRAJS, 2))
+    expertstepcxarr = np.zeros((TEST_NUM_STEPS, TEST_NUM_TRAJS, 2))
+    finalnormederrors = np.zeros((TEST_NUM_STEPS,2))
 
-    for k in range(100):
+    for k in range(TEST_NUM_TRAJS):
         obs = Tensor(system.generate_initial_obs())
         print("Initial Obs = " + str(obs))
 
@@ -441,10 +510,14 @@ def main():
             experttraj[step] = np.array(initialobs)
             initialstate = (initialobs[0:2])
             initialstate = torch.Tensor(initialstate).cuda()
-            next_state, next_obs, _ = system.step(initialstate, None)
-            controlinputs.append(np.array(next_obs[2]))
+            next_state, next_obs, cxexpert = system.step(initialstate, None)
+            # print("ACTION = " + str(next_obs[2]))
+            expertcxarray.append([float(cxexpert[0,0]), float(cxexpert[0,1])])
+            controlinputs.append(np.array(initialobs[2]))
+            # expertstepcxarr[step,k] = np.array(cxexpert)
             initialobs = next_obs
-
+        expertstepcxarr[:,k,0] = experttraj[:,0]
+        expertstepcxarr[:,k,1] = experttraj[:,1]
         simulatedtraj = np.zeros((TEST_NUM_STEPS, 3))
 
         print("Done with the Expert Trajectories")
@@ -458,9 +531,14 @@ def main():
                         initialobs, GAIL_DIS_HDIM,
                         np.array([False, False]))
             action = action[np.newaxis, :]
-            # next_state, next_obs, _ = system.step_with_predefined_actions(initialstate, controlinputs[step+1], action)
-            next_state, next_obs, _ = system.step(initialstate, action)
+            print("HERE = " + str(controlinputs[step]))
+            # next_state, next_obs, cxsimulated = system.step_with_predefined_actions(initialstate, controlinputs[step], action)
+            next_state, next_obs, cxsimulated = system.step(initialstate, action)
+            simulatedcxarray.append([float(cxsimulated[0,0]), float(cxsimulated[0,1])])
+            simulatedstepcxarr[step,k] = np.array(cxsimulated)
             initialobs = Tensor(next_obs)
+        simulatedstepcxarr[:,k,0] = simulatedtraj[:,0]
+        simulatedstepcxarr[:,k,1] = simulatedtraj[:,1]
 
         #Calculating difference in the trajectory states and trajectory actions
         trajerror = simulatedtraj - experttraj
@@ -472,22 +550,39 @@ def main():
         stateerrorarr1.append(statenorm1)
         stateerrorarr2.append(statenorm2)
         actionerrorarr.append(actionnorm)
+
+        
+        # errorstepcxmeans = np.mean(errorstepcxarr, axis=1 )
+        # print("SHAPE = " + str(np.shape(errorstepcxmeans)))
+        # axs[1][3].plot(errorstepcxmeans[:,0], color='red', label='X1')
+        # axs[1][3].plot
+        # axs[1][3].plot(errorstepcxmeans[:,1], color='blue', label='X2')
+
         axs[0][1].cla()
         axs[0][1].set_title("SIM. Vs. EXP. TRAJ.")
         axs[0][1].plot(simulatedtraj[:,1], color='red', label='Simulated Traj')
         axs[0][1].plot(experttraj[:,1],color='blue', label="Expert Traj" )
         plt.pause(0.005)
+    errorstepcxarr = expertstepcxarr - simulatedstepcxarr
+    for step in range(TEST_NUM_STEPS):
+        finalnormederrors[step, 0] = np.linalg.norm(errorstepcxarr[step], 2)
+        finalnormederrors[step, 1] = np.var(errorstepcxarr[step])
+    axs[1][3].set_ylim((2.5,8.0))
+    axs[1][3].errorbar(np.arange(0,TEST_NUM_STEPS),finalnormederrors[:,0], yerr=finalnormederrors[:,1], linestyle='-', marker='^' )
+    # axs[1][3].plot(np.arange(0,TEST_NUM_STEPS),finalnormederrors[:,0])
     axs[0][2].set_title("x1 and x2 ERR. (Sim. vs. Exp.")
     axs[0][2].boxplot([stateerrorarr1, stateerrorarr2])
-    axs[0][3].set_title("Mean Err. - Distr. (Sim. vs. Exp.")
-    axs[1][3].set_title("Var Err. - Distr. (Sim. vs Exp.")
+    # axs[0][3].set_title("Mean Err. - Distr. (Sim. vs. Exp.)")
+    # axs[1][3].set_title("Mean and Var. of CX error at timestep")
     merrorarr = np.array(merrorarr)
     verrorarr = np.array(verrorarr)
     # print(merrorarr)
     # print(verrorarr)
-    axs[0][3].boxplot(merrorarr)
-    axs[1][3].boxplot(verrorarr)
+    # axs[0][3].boxplot(merrorarr)
+    axs[1][2].set_title("Error in CX for X1 & X2")
+    axs[1][2].boxplot([np.array(expertcxarray)[:,0] - np.array(simulatedcxarray)[:,0], np.array(expertcxarray)[:,1] - np.array(simulatedcxarray)[:,1]])
     plt.legend()
+    plt.autoscale() 
     plt.show()
 
 

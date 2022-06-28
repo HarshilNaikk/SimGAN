@@ -32,7 +32,7 @@ class System:
         # print("SHAPE OF CX = " + str(np.shape(cx)))
         next_state = Tensor(np.matmul(self.A, prev_state.T, dtype='float32') + np.matmul(self.B, u_k.T, dtype='float32') + np.array(cx, dtype='float32'))
         # print(np.shape(next_state.T))
-        error = None
+        error = cx
         # print(np.shape(u_k))
         next_obs = np.concatenate((next_state.T[:, 0], u_k))
         return next_state.T, next_obs, error
@@ -44,7 +44,7 @@ class System:
         prev_state = prev_state.cpu()
         u_k = control_input
         # u_k = u_k.cpu()
-        print("SHAPE OF uk = " + str(np.shape(u_k)) )
+        print("SHAPE OF uk = " + str((u_k)) )
         u_k = np.reshape(u_k, (1))
         
         if cx == None:
@@ -54,7 +54,7 @@ class System:
         # print("SHAPE OF CX = " + str(np.shape(cx)))
         next_state = Tensor(np.matmul(self.A, prev_state.T, dtype='float32') + np.matmul(self.B, u_k.T, dtype='float32') + np.array(cx, dtype='float32'))
         # print(np.shape(next_state.T))
-        error = None
+        error = cx
         # print(np.shape(u_k))
         next_obs = np.concatenate((next_state.T[:, 0], u_k))
         return next_state.T, next_obs, error
