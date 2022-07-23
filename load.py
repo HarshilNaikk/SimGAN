@@ -14,10 +14,10 @@ class Load:
     
     def get_from_csv(self, filename, traj_length = None):
         df = pd.read_csv(filename)
-        if df.shape[1] == 3:
-            df.columns = ["x1", "x2", "u"]
-        if df.shape[1] == 2:
-            df.columns = ["c1", "c2"]
+        if df.shape[1] == 24:
+            df.columns = ["X","Y","Z","Q1","Q2","Q3","Q4","R","P","Y","VX","VY","VZ","WX","WY","WZ","P0","P1","P2","P", "a1", "a2", "a3", "a4"]
+        if df.shape[1] == 4:
+            df.columns = ["c1", "c2", "c3", "c4"]
         # df.drop("t", axis=1, inplace=True)
         # # Remove human data because prediction is form leader and the follower
         # df.drop("v_human", axis=1, inplace=True)
@@ -38,6 +38,8 @@ class Load:
             data = self.get_from_csv(filename, traj_length)
             # sas = self.get_sas(data)
             df = df.append(data,)
+            if i ==2:
+                break
             if i % 10 == 0:
                 print(f'Processed data for {i} file(s)')
             i += 1

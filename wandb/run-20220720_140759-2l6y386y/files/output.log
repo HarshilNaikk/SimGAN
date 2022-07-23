@@ -1,0 +1,88 @@
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/anaconda3/envs/drones/lib/python3.8/site-packages/gym/spaces/box.py:73: UserWarning: [33mWARN: Box bound precision lowered by casting to float32
+  logger.warn(
+Getting Data...
+Preparing Data...
+Processed data for 10 file(s)
+Processed data for 20 file(s)
+INITIAL SHAPE = (11500, 120)
+PRINTING SHAPES OF THE TWO DATA INPUTS -
+(11500, 120)
+[INFO] BaseAviary.__init__() loaded parameters from the drone's .urdf:
+[INFO] m 0.027000, L 0.039700,
+[INFO] ixx 0.000014, iyy 0.000014, izz 0.000022,
+[INFO] kf 0.000000, km 0.000000,
+[INFO] t2w 2.250000, max_speed_kmh 30.000000,
+[INFO] gnd_eff_coeff 11.368590, prop_radius 0.023135,
+[INFO] drag_xy_coeff 0.000001, drag_z_coeff 0.000001,
+[INFO] dw_coeff_1 2267.180000, dw_coeff_2 0.160000, dw_coeff_3 -0.110000
+startThreads creating 1 threads.
+starting thread 0
+started thread 0
+argc=2
+argv[0] = --unused
+argv[1] = --start_demo_name=Physics Server
+ExampleBrowserThreadFunc started
+X11 functions dynamically loaded using dlopen/dlsym OK!
+X11 functions dynamically loaded using dlopen/dlsym OK!
+Creating context
+Created GL 3.3 context
+Direct GLX rendering context obtained
+Making context current
+GL_VENDOR=NVIDIA Corporation
+GL_RENDERER=NVIDIA GeForce 920MX/PCIe/SSE2
+GL_VERSION=3.3.0 NVIDIA 470.103.01
+GL_SHADING_LANGUAGE_VERSION=3.30 NVIDIA via Cg compiler
+pthread_getconcurrency()=0
+Version = 3.3.0 NVIDIA 470.103.01
+Vendor = NVIDIA Corporation
+Renderer = NVIDIA GeForce 920MX/PCIe/SSE2
+b3Printf: Selected demo: Physics Server
+startThreads creating 1 threads.
+starting thread 0
+started thread 0
+MotionThreadFunc thread started
+ven = NVIDIA Corporation
+ven = NVIDIA Corporation
+viewMatrix (0.642787516117096, -0.4393851161003113, 0.6275069713592529, 0.0, 0.766044557094574, 0.36868777871131897, -0.5265407562255859, 0.0, -0.0, 0.8191521167755127, 0.5735764503479004, 0.0, 2.384185791015625e-07, 2.384185791015625e-07, -5.000000476837158, 1.0)
+projectionMatrix (0.6943359375, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0000200271606445, -1.0, 0.0, 0.0, -0.02000020071864128, 0.0)
+[ERROR] in DSLPIDControl.__init__(), DSLPIDControl requires DroneModel.CF2X or DroneModel.CF2P

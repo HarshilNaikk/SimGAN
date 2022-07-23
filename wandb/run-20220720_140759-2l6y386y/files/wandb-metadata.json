@@ -1,0 +1,23 @@
+{
+    "os": "Linux-5.4.0-109-generic-x86_64-with-glibc2.17",
+    "python": "3.8.13",
+    "heartbeatAt": "2022-07-20T08:38:03.160538",
+    "startedAt": "2022-07-20T08:37:59.865350",
+    "docker": null,
+    "gpu": "NVIDIA GeForce 920MX",
+    "gpu_count": 1,
+    "cpu_count": 4,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "-m third_party.a2c_ppo_acktr.main_gail_dyn_ppo",
+    "git": {
+        "remote": "git@github.com:HarshilNaikk/SimGAN.git",
+        "commit": "9c4c18943766192026593ce957da5f279f81de7d"
+    },
+    "email": "harshil3004@gmail.com",
+    "root": "/home/harshil/work/simgan_lti",
+    "host": "harshil",
+    "username": "harshil",
+    "executable": "/home/harshil/anaconda3/envs/drones/bin/python"
+}

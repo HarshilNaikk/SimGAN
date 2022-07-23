@@ -1,0 +1,48 @@
+2022-06-28 14:36:19,723 INFO    MainThread:13064 [wandb_setup.py:_flush():76] Loading settings from /home/harshil/.config/wandb/settings
+2022-06-28 14:36:19,723 INFO    MainThread:13064 [wandb_setup.py:_flush():76] Loading settings from /home/harshil/work/simgan_lti/wandb/settings
+2022-06-28 14:36:19,723 INFO    MainThread:13064 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2022-06-28 14:36:19,723 INFO    MainThread:13064 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program': '<python with no main file>'}
+2022-06-28 14:36:19,724 INFO    MainThread:13064 [wandb_init.py:_log_setup():428] Logging user logs to /home/harshil/work/simgan_lti/wandb/run-20220628_143619-199sz9pb/logs/debug.log
+2022-06-28 14:36:19,724 INFO    MainThread:13064 [wandb_init.py:_log_setup():429] Logging internal logs to /home/harshil/work/simgan_lti/wandb/run-20220628_143619-199sz9pb/logs/debug-internal.log
+2022-06-28 14:36:19,724 INFO    MainThread:13064 [wandb_init.py:init():462] calling init triggers
+2022-06-28 14:36:19,724 INFO    MainThread:13064 [wandb_init.py:init():465] wandb.init called with sweep_config: {}
+config: {}
+2022-06-28 14:36:19,725 INFO    MainThread:13064 [wandb_init.py:init():515] starting backend
+2022-06-28 14:36:19,725 INFO    MainThread:13064 [backend.py:_multiprocessing_setup():97] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2022-06-28 14:36:19,735 INFO    MainThread:13064 [backend.py:ensure_launched():217] starting backend process...
+2022-06-28 14:36:19,784 ERROR   MainThread:13064 [wandb_init.py:init():1026] error
+Traceback (most recent call last):
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/site-packages/wandb/sdk/wandb_init.py", line 999, in init
+    run = wi.init()
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/site-packages/wandb/sdk/wandb_init.py", line 523, in init
+    backend.ensure_launched()
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/site-packages/wandb/sdk/backend/backend.py", line 220, in ensure_launched
+    self.wandb_process.start()
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/multiprocessing/process.py", line 121, in start
+    self._popen = self._Popen(self)
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/multiprocessing/context.py", line 284, in _Popen
+    return Popen(process_obj)
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/multiprocessing/popen_spawn_posix.py", line 32, in __init__
+    super().__init__(process_obj)
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/multiprocessing/popen_fork.py", line 19, in __init__
+    self._launch(process_obj)
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/multiprocessing/popen_spawn_posix.py", line 42, in _launch
+    prep_data = spawn.get_preparation_data(process_obj._name)
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/multiprocessing/spawn.py", line 154, in get_preparation_data
+    _check_not_importing_main()
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/multiprocessing/spawn.py", line 134, in _check_not_importing_main
+    raise RuntimeError('''
+RuntimeError: 
+        An attempt has been made to start a new process before the
+        current process has finished its bootstrapping phase.
+
+        This probably means that you are not using fork to start your
+        child processes and you have forgotten to use the proper idiom
+        in the main module:
+
+            if __name__ == '__main__':
+                freeze_support()
+                ...
+
+        The "freeze_support()" line can be omitted if the program
+        is not going to be frozen to produce an executable.

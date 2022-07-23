@@ -194,7 +194,7 @@ class SplitPolicyBaseNew(nn.Module):
         y1 = self.actor_contact(x)
         y2 = self.actor_actuator(x)
 
-        action_feat = torch.cat([y2])
+        action_feat = torch.cat((y1,y2),1)
 
         return value, action_feat, rnn_hxs
 
@@ -217,27 +217,29 @@ class StateDiagGaussianNew(nn.Module):
             lambda x: nn.init.constant_(x, -0.5),
             gain=1.0)
 
-        # self.contact_mean = init_mean_(nn.Linear(hidden_size, 4 * num_feet))
+        self.contact_mean = init_mean_(nn.Linear(hidden_size, 4))
         self.actuator_mean = init_mean_(nn.Linear(hidden_size,num_outputs))
+        self.contact_mean = self.contact_mean.to(device='cuda')
         self.actuator_mean = self.actuator_mean.to(device='cuda')
 
-        # self.contact_logstd = init_logstd_(nn.Linear(hidden_size, 4 * num_feet))
+        self.contact_logstd = init_logstd_(nn.Linear(hidden_size, 4))
         self.actuator_logstd = init_logstd_(nn.Linear(hidden_size, num_outputs))
+        self.contact_logstd = self.contact_logstd.to(device='cuda')
         self.actuator_logstd = self.actuator_logstd.to(device='cuda')
 
     def forward(self, x):
-        # contact_feat = x[:, :self.hidden_size]
-        actuator_feat = x.cuda()
+        contact_feat = x[:, :self.hidden_size].cuda()
+        actuator_feat = x[:,self.hidden_size:].cuda()
         # print(np.shape(x))
 
-        # contact_mean = self.contact_mean(contact_feat)
-        actuator_mean = self.actuator_mean(x)
+        contact_mean = self.contact_mean(contact_feat)
+        actuator_mean = self.actuator_mean(actuator_feat)
 
-        # contact_logstd = self.contact_logstd(contact_feat)
+        contact_logstd = self.contact_logstd(contact_feat)
         actuator_logstd = self.actuator_logstd(actuator_feat)
 
-        action_mean = torch.Tensor(actuator_mean.to(device='cpu'))
-        action_logstd = torch.Tensor((actuator_logstd).to(device='cpu'))
+        action_mean = torch.Tensor(torch.cat((contact_mean, actuator_mean),1).to(device='cpu'))
+        action_logstd = torch.Tensor(torch.cat((contact_logstd, actuator_logstd),1).to(device='cpu'))
 
         return FixedNormal(action_mean, action_logstd.exp()), action_logstd.exp()
         # return MultiNormalWrapper(action_mean, scale_tril=torch.diag(action_logstd.exp()))

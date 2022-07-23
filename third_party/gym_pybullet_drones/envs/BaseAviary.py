@@ -245,7 +245,8 @@ class BaseAviary(gym.Env):
     ################################################################################
 
     def step(self,
-             action
+             action,
+             env_action
              ):
         """Advances the environment by one simulation step.
 
@@ -341,10 +342,12 @@ class BaseAviary(gym.Env):
                     self._drag(self.last_clipped_action[i, :], i)
                     self._downwash(i)
             #### PyBullet computes the new state, unless Physics.DYN ###
+            battery_levels = self.set_con_coeff_and_return_battery_level(env_action)
             if self.PHYSICS != Physics.DYN:
                 p.stepSimulation(physicsClientId=self.CLIENT)
             #### Save the last applied action (e.g. to compute drag) ###
             self.last_clipped_action = clipped_action
+        
         #### Update and store the drones kinematic information #####
         self._updateAndStoreKinematicInformation()
         #### Prepare the return values #############################
@@ -357,6 +360,28 @@ class BaseAviary(gym.Env):
         return obs, reward, done, info
     
     ################################################################################
+    
+    def set_con_coeff_and_return_battery_level(self, con_f):
+        # foot_link = self.robot.n_total_dofs - 1
+        this_fric = np.tanh(con_f)   # [-1 ,1]
+
+        this_fric[0:2] = (this_fric[0:2] + 1) / 2.0 * 5.0     # 0 ~ 5, lateral & spin Fric
+        this_fric[2] = (this_fric[2] + 1) / 2.0 * 15.0       # 0 ~ 10, restitution
+        this_fric[3] = (this_fric[3] + 1) / 2.0 * 4.0 + 1.0        # 1 ~ 5, log (damping/2)
+        this_fric[3] = np.exp(this_fric[3]) * 2                     # 20 ~ 2000, damping
+
+        # print(this_fric)
+        jointindices = self._p.getNumJoints(self.DRONE_IDS[0])
+        print("NO. OF DRONE JOINTS BEING SEEN ARE " + str(jointindices))
+
+        for i in range(jointindices):
+            self._p.changeDynamics(self.DRONE_IDS[0], i,
+                                rollingFriction=this_fric[0], spinningFriction=this_fric[1],
+                                contactDamping=this_fric[3], contactStiffness=1.0)
+
+        # battery level from -0.5 to 1.5
+        battery_level = (this_fric[4:7] + 0.5)
+        return battery_level
     
     def render(self,
                mode='human',
@@ -1015,7 +1040,7 @@ class BaseAviary(gym.Env):
         raise NotImplementedError
     
     ################################################################################
-    
+     
     def _computeObs(self):
         """Returns the current observation of the environment.
 

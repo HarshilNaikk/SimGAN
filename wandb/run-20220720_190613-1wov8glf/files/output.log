@@ -1,0 +1,67 @@
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+/home/harshil/work/simgan_lti/load.py:40: FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df = df.append(data,)
+Traceback (most recent call last):
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/site-packages/pandas/core/indexes/base.py", line 3621, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas/_libs/index.pyx", line 136, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas/_libs/index.pyx", line 163, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas/_libs/hashtable_class_helper.pxi", line 5198, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas/_libs/hashtable_class_helper.pxi", line 5206, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 0
+The above exception was the direct cause of the following exception:
+Traceback (most recent call last):
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/harshil/work/simgan_lti/third_party/a2c_ppo_acktr/main_gail_dyn_ppo.py", line 639, in <module>
+    main()
+  File "/home/harshil/work/simgan_lti/third_party/a2c_ppo_acktr/main_gail_dyn_ppo.py", line 115, in main
+    print("INITIAL SHAPE = " + str(np.shape(xcommau[0])))
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/site-packages/pandas/core/frame.py", line 3505, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "/home/harshil/anaconda3/envs/drones/lib/python3.8/site-packages/pandas/core/indexes/base.py", line 3623, in get_loc
+    raise KeyError(key) from err
+KeyError: 0
+Getting Data...
+Preparing Data...
+Processed data for 10 file(s)
+Processed data for 20 file(s)
