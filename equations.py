@@ -26,13 +26,13 @@ class System:
         # print(u_k)
         
         if cx == None:
-            cx = np.array([[0.1*math.sin(prev_state[1])], [0.1*math.cos(prev_state[0])]], dtype='float32').dot(np.array(u_k))*0.25
+            cx = np.array([[0.1*math.sin(prev_state[1])], [0.1*math.cos(prev_state[0])]], dtype='float32').dot(np.array(u_k))
             cx = cx[np.newaxis, :]
         # Leader Difference Equation: x(k+1) = A*x(k) + B*u_k
         # print("SHAPE OF CX = " + str(np.shape(cx)))
         next_state = Tensor(np.matmul(self.A, prev_state.T, dtype='float32') + np.matmul(self.B, u_k.T, dtype='float32') + np.array(cx, dtype='float32'))
         # print(np.shape(next_state.T))
-        error = None
+        error = cx
         # print(np.shape(u_k))
         next_obs = np.concatenate((next_state.T[:, 0], u_k))
         return next_state.T, next_obs, error

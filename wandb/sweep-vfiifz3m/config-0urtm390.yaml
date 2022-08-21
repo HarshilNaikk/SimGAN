@@ -1,0 +1,8 @@
+wandb_version: 1
+
+batch_size:
+  value: 8
+learning_rate:
+  value: 0.00043561628655968445
+optimizer:
+  value: adam

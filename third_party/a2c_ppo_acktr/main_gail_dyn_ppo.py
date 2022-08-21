@@ -41,33 +41,36 @@ from third_party.a2c_ppo_acktr.storage import RolloutStorage
 from load import Load 
 from equations import System
 import matplotlib.pyplot as plt
+import pdb
 
 # from my_pybullet_envs import utils as gan_utils
 
 import logging
 import sys
+from scipy.signal import savgol_filter
 
 TRAJECTORY_LOAD_PATH1="./data/data/"
 TRAJECTORY_LOAD_PATH2= "./data/parameters"
 # TRAJECTORY_LENGTH = 30
-TRAJECTORIES_NUM = 20 # MAX 90 
-BATCH_SIZE = 8
+TRAJECTORIES_NUM = 500 # MAX 90 
+BATCH_SIZE = 1
 # HIDDEN_SIZE = 16
 # EPOCHS = 1000
 SEED = np.random.random()
-NUM_MINI_BATCH = 8
+NUM_MINI_BATCH = 1
 ENTROPY_COEF = 0
 LR = 5*1e-8
 GAIL_DIS_HDIM = 64
 GAIL_TRAJ_NUM = 10
 GAIL_DOWNSAMPLE_FREQUENCY = 1
 GAIL_EPOCH = 10
-NUM_STEPS = 20
+NUM_STEPS = 2
 NUM_PROCESSES = 1
-NUM_ENV_STEPS = 10000
+NUM_ENV_STEPS = 1000
 NUM_EPISODES = 50
 CUDA = 1
-TEST_NUM_STEPS = 20
+TEST_NUM_STEPS = 2
+TRAJ_LENGTH = 20
 
 sys.path.append("third_party")
 np.set_printoptions(precision=2, suppress=None, threshold=sys.maxsize)
@@ -195,6 +198,12 @@ def main():
     # fig2, axs2 = plt.subplots(2 , 1)
 
     while j < num_updates and total_num_episodes < max_num_episodes:
+
+        obs = Tensor(system.generate_initial_obs())
+        print("First Obs = " + str(obs))
+        rollouts.obs[0][0].copy_(obs)
+        
+
         
         # Learning rate decay for the main loop
         if args.use_linear_lr_decay:
@@ -294,7 +303,7 @@ def main():
             ret_rms.update(returns.view(-1).cpu().numpy())
             rews = rollouts.rewards[step].view(-1).cpu().numpy()
             rews = np.clip(rews / np.sqrt(ret_rms.var + 1e-7),
-                           -10.0, 10.0)
+                           -20.0, 20.0)
             rollouts.rewards[step] = Tensor(rews).view(-1, 2)
             # print("TORCH REWARDS = " + str(torch.mean(returns).cpu().data))
             currenttrajnorm = np.linalg.norm(rollouts.obs[:,0,0:2].cpu().numpy(), 2) 
@@ -382,14 +391,14 @@ def main():
         axs[1][2].cla()
         axs[1][0].set_title("X1 (Sim. vs Exp.")
         axs[1][1].set_title("X2 (Sim. vs Exp.")
-        axs[1][2].set_title("Var. of C")
+        axs[1][2].set_title("REl. Error in Cx")
         axs[0][0].plot(gaillossp,color='blue', label='GAIL_LOSS_P')
         axs[0][0].plot(gaillosse, color='red', label='GAIL_LOSS_E')
         axs[0][0].plot(gailloss, color='green', label='GAIL_LOSS')
         axs[0][0].plot(genloss, color='black', label="GEN_LOSS")
         axs[1][0].plot(position1.cpu().numpy(), color='red', label='Predicted')
-        axs[1][2].plot(np.array(np.array(action_logstd_arr)[:,0]))
-        axs[1][2].plot(np.array(np.array(action_logstd_arr)[:,1]))
+        # axs[1][2].plot(np.array(np.array(action_logstd_arr)[:,0]))
+        # axs[1][2].plot(np.array(np.array(action_logstd_arr)[:,1]))
         for i in range(19):
             axs[1][0].plot(xcommau[20*i:20*(i+1),0], color='blue')
         axs[1][1].plot(position2.cpu().numpy(), color='red')
@@ -424,69 +433,115 @@ def main():
     print("TESTING TRAINED DYNAMICS MODEL COMMENCES HERE")
     # From here, we initiate a starting state, and just simulate trajectories with the trained dynamics as well as the expert dynamics.
 
-    stateerrorarr1 = []
-    stateerrorarr2 = []
+    stateerrorarr1 = np.zeros((100, TRAJ_LENGTH))
+    stateerrorarr2 = np.zeros((100, TRAJ_LENGTH))
     actionerrorarr = []
+    paramrelerror1 = np.zeros((100, TRAJ_LENGTH))
+    paramrelerror2 = np.zeros((100, TRAJ_LENGTH))
+    meancxoverall = []
+    meancxexpert = []
+    experttraj = np.zeros((TRAJ_LENGTH+10, 3))
+    simulatedtrajoverall = np.zeros((TRAJ_LENGTH+10, 3))
 
+ 
     for k in range(100):
         obs = Tensor(system.generate_initial_obs())
         print("Initial Obs = " + str(obs))
 
-        experttraj = np.zeros((TEST_NUM_STEPS, 3))
+        
         controlinputs = []
 
         # Generating Expert Trajectory
-        initialobs = obs.cpu()
-        for step in range(TEST_NUM_STEPS):
-            experttraj[step] = np.array(initialobs)
-            initialstate = (initialobs[0:2])
-            initialstate = torch.Tensor(initialstate).cuda()
-            next_state, next_obs, _ = system.step(initialstate, None)
-            controlinputs.append(np.array(next_obs[2]))
-            initialobs = next_obs
+        actualinitialobs = obs.cpu()
+        for trajstep in range(TRAJ_LENGTH):
+            simulatedcxarr = np.zeros((TEST_NUM_STEPS, 2))
+            expertcxarr = np.zeros((TEST_NUM_STEPS, 2))
+            exp_initialobs = actualinitialobs
+            sim_initialobs = actualinitialobs
+            simulatedtraj = np.zeros((TEST_NUM_STEPS, 3))
 
-        simulatedtraj = np.zeros((TEST_NUM_STEPS, 3))
+            # print("Done with the Expert Trajectories")
+            # Generating Simulated Trajectory
+            # sim_initialobs = sim_initialobs.to(device='cuda')
+            sim_initialobs = torch.Tensor(sim_initialobs).cuda()
+            # sim_initialobs = torch.from_numpy(sim_initialobs).to(device='cuda')
+            for step in range(TEST_NUM_STEPS):
+                simulatedtraj[step] = np.array(sim_initialobs.cpu())
+                simulatedtrajoverall[trajstep+step] = np.array(sim_initialobs.cpu())
+                initialstate = (sim_initialobs[0:2])
+                value, action, _, _, _ = actor_critic.act(
+                            sim_initialobs, GAIL_DIS_HDIM,
+                            np.array([False, False]))
+                action = action[np.newaxis, :]
+                # next_state, next_obs, _ = system.step_with_predefined_actions(initialstate, controlinputs[step+1], action)
+                next_state, next_obs, simulatedcx = system.step(initialstate, action)
+                sim_initialobs = Tensor(next_obs)
+                simulatedcxarr[step] = simulatedcx
+            
+            for step in range(TEST_NUM_STEPS):
+                experttraj[trajstep+step] = np.array(exp_initialobs)
+                initialstate = (exp_initialobs[0:2])
+                initialstate = torch.Tensor(initialstate).cuda()
+                next_state, next_obs, expertcx = system.step(initialstate, None)
+                expertcxarr[step] = expertcx
+                controlinputs.append(np.array(next_obs[2]))
+                exp_initialobs = next_obs
+            actualinitialobs = experttraj[trajstep+1]
+            
+            #Calculating difference in the trajectory states and trajectory actions
+            trajerror = (simulatedtraj[:,0:2] - experttraj[trajstep:trajstep+TEST_NUM_STEPS, 0:2])/experttraj[trajstep:trajstep+TEST_NUM_STEPS, 0:2]
+            paramerror = (simulatedcxarr-expertcxarr)/expertcxarr
+            meancxoverall.append(np.mean(simulatedcxarr))
+            meancxexpert.append(np.mean(expertcxarr))
+            # pdb.set_trace()
+            statenorm1 = np.linalg.norm((trajerror[:,0]), 2)/TEST_NUM_STEPS
+            statenorm2 = np.linalg.norm((trajerror[:,1]), 2)/TEST_NUM_STEPS
+            paramerrornorm1 = np.linalg.norm(paramerror[:,0], 2)/TEST_NUM_STEPS
+            paramerrornorm2 = np.linalg.norm(paramerror[:,1], 2)/TEST_NUM_STEPS
+            # pdb.set_trace()
+            # statenorm = np.linalg.norm((trajerror[:,0:2]), 2)/TEST_NUM_STEPS
+            # actionnorm = np.linalg.norm(trajerror[:,2], 2)/TEST_NUM_STEPS
 
-        print("Done with the Expert Trajectories")
-        # Generating Simulated Trajectory
-        initialobs = obs.cpu()
-        initialobs = Tensor(initialobs.to(device='cuda'))
-        for step in range(TEST_NUM_STEPS):
-            simulatedtraj[step] = np.array(initialobs.cpu())
-            initialstate = (initialobs[0:2])
-            value, action, _, _, _ = actor_critic.act(
-                        initialobs, GAIL_DIS_HDIM,
-                        np.array([False, False]))
-            action = action[np.newaxis, :]
-            # next_state, next_obs, _ = system.step_with_predefined_actions(initialstate, controlinputs[step+1], action)
-            next_state, next_obs, _ = system.step(initialstate, action)
-            initialobs = Tensor(next_obs)
-
-        #Calculating difference in the trajectory states and trajectory actions
-        trajerror = simulatedtraj - experttraj
-        statenorm1 = np.linalg.norm((trajerror[:,0]), 2)/TEST_NUM_STEPS
-        statenorm2 = np.linalg.norm((trajerror[:,1]), 2)/TEST_NUM_STEPS
-        statenorm = np.linalg.norm((trajerror[:,0:2]), 2)/TEST_NUM_STEPS
-        actionnorm = np.linalg.norm(trajerror[:,2], 2)/TEST_NUM_STEPS
-
-        stateerrorarr1.append(statenorm1)
-        stateerrorarr2.append(statenorm2)
-        actionerrorarr.append(actionnorm)
+            stateerrorarr1[k,trajstep] = statenorm1
+            stateerrorarr2[k,trajstep] = statenorm2
+            paramrelerror1[k,trajstep] = paramerrornorm1
+            paramrelerror2[k,trajstep] = paramerrornorm2
+        # actionerrorarr.append(actionnorm)
         axs[0][1].cla()
         axs[0][1].set_title("SIM. Vs. EXP. TRAJ.")
-        axs[0][1].plot(simulatedtraj[:,1], color='red', label='Simulated Traj')
-        axs[0][1].plot(experttraj[:,1],color='blue', label="Expert Traj" )
+        axs[0][1].plot(simulatedtrajoverall[:,0], simulatedtrajoverall[:,1], color='red', label='Simulated Traj')
+        axs[0][1].plot(experttraj[:,0],experttraj[:,1],color='blue', label="Expert Traj" )
         plt.pause(0.005)
+
+    stateerrorarr1 = np.linalg.norm(stateerrorarr1, 2, axis=0)/100
+    stateerrorarr2 = np.linalg.norm(stateerrorarr2, 2, axis=0)/100
+    paramrelerror1 = np.linalg.norm(paramrelerror1, 2, axis=0)/100
+    paramrelerror2 = np.linalg.norm(paramrelerror2, 2, axis=0)/100
+
+    # stateerrorarr1 = savgol_filter(stateerrorarr1, 5, 2)
+    # stateerrorarr2 = savgol_filter(stateerrorarr2, 5, 2)
+    # paramrelerror1 = savgol_filter(paramrelerror1, 5, 2)
+    # paramrelerror2 = savgol_filter(paramrelerror2, 5, 2)
+
     axs[0][2].set_title("x1 and x2 ERR. (Sim. vs. Exp.")
-    axs[0][2].boxplot([stateerrorarr1, stateerrorarr2])
-    axs[0][3].set_title("Mean Err. - Distr. (Sim. vs. Exp.")
+    axs[0][2].plot(stateerrorarr1)
+    axs[0][2].plot(stateerrorarr2)
+    axs[1][2].plot(paramrelerror1)
+    axs[1][2].plot(paramrelerror2)
+    # axs[0][3].set_title("Mean Err. - Distr. (Sim. vs. Exp.")
     axs[1][3].set_title("Var Err. - Distr. (Sim. vs Exp.")
     merrorarr = np.array(merrorarr)
     verrorarr = np.array(verrorarr)
     # print(merrorarr)
     # print(verrorarr)
-    axs[0][3].boxplot(merrorarr)
+    # axs[0][3].boxplot(merrorarr)
     axs[1][3].boxplot(verrorarr)
+    print("------------------------------")
+    print("MEAN ERROR IN X IS = " + str(np.mean(stateerrorarr1)) + ", " + str(np.mean(stateerrorarr2)))
+    print("MEAN ERROR IN C IS = " + str(np.mean(paramrelerror1)) + ", " + str(np.mean(paramrelerror2)))
+    print("MEAN C IS = " + str(np.mean(meancxoverall)))
+    print("AND THE SAME FOR EXPERT = " + str(np.mean(meancxexpert)))
+    print("------------------------------")
     plt.legend()
     plt.show()
 

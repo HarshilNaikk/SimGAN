@@ -1,0 +1,17 @@
+program: third_party/a2c_ppo_acktr/main_gail_dyn_ppo.py
+method: bayes
+metric:
+  name: genloss
+  goal: minimize
+metric:
+  name: gailloss
+  goal: maximize
+parameters:
+  learning_rate:
+    min: 0.000000001
+    max: 0.001
+  batch_size:
+    min: 2
+    max: 20
+  optimizer:
+    values: ["adam"]

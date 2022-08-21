@@ -1,0 +1,67 @@
+2022-08-06 11:00:50 INFO Running runs: []
+2022-08-06 11:00:50 INFO Agent received command: run
+2022-08-06 11:00:50 INFO Agent starting run with config:
+	batch_size: 16
+	learning_rate: 7.929453266150136e-05
+	optimizer: adam
+2022-08-06 11:00:50 INFO About to run command: /usr/bin/env python train.py --batch_size=16 --learning_rate=7.929453266150136e-05 --optimizer=adam
+2022-08-06 11:00:55 INFO Running runs: ['qh18i9mn']
+2022-08-06 11:00:55 INFO Cleaning up finished run: qh18i9mn
+2022-08-06 11:00:56 INFO Agent received command: run
+2022-08-06 11:00:56 INFO Agent starting run with config:
+	batch_size: 8
+	learning_rate: 0.00043561628655968445
+	optimizer: adam
+2022-08-06 11:00:56 INFO About to run command: /usr/bin/env python train.py --batch_size=8 --learning_rate=0.00043561628655968445 --optimizer=adam
+2022-08-06 11:01:01 INFO Running runs: ['0urtm390']
+2022-08-06 11:01:01 INFO Cleaning up finished run: 0urtm390
+2022-08-06 11:01:01 INFO Agent received command: run
+2022-08-06 11:01:01 INFO Agent starting run with config:
+	batch_size: 2
+	learning_rate: 0.000191854328573373
+	optimizer: adam
+2022-08-06 11:01:01 INFO About to run command: /usr/bin/env python train.py --batch_size=2 --learning_rate=0.000191854328573373 --optimizer=adam
+2022-08-06 11:02:04 INFO Running runs: []
+2022-08-06 11:02:05 INFO Agent received command: run
+2022-08-06 11:02:05 INFO Agent starting run with config:
+	batch_size: 3
+	learning_rate: 0.0008185390891011963
+	optimizer: adam
+2022-08-06 11:02:05 INFO About to run command: /usr/bin/env python train.py --batch_size=3 --learning_rate=0.0008185390891011963 --optimizer=adam
+2022-08-06 11:02:10 INFO Running runs: ['moxgyjvz']
+2022-08-06 11:02:10 INFO Cleaning up finished run: moxgyjvz
+2022-08-06 11:02:10 INFO Agent received command: run
+2022-08-06 11:02:10 INFO Agent starting run with config:
+	batch_size: 2
+	learning_rate: 0.00019645376734466377
+	optimizer: adam
+2022-08-06 11:02:10 INFO About to run command: /usr/bin/env python train.py --batch_size=2 --learning_rate=0.00019645376734466377 --optimizer=adam
+2022-08-06 11:02:37 INFO Running runs: []
+2022-08-06 11:02:38 INFO Agent received command: run
+2022-08-06 11:02:38 INFO Agent starting run with config:
+	batch_size: 16
+	learning_rate: 0.00012760117383627754
+	optimizer: adam
+2022-08-06 11:02:38 INFO About to run command: /usr/bin/env python main_gail_dyn_ppo.py --batch_size=16 --learning_rate=0.00012760117383627754 --optimizer=adam
+2022-08-06 11:03:26 INFO Running runs: []
+2022-08-06 11:03:27 INFO Agent received command: run
+2022-08-06 11:03:27 INFO Agent starting run with config:
+	batch_size: 2
+	learning_rate: 7.021749787695342e-05
+	optimizer: adam
+2022-08-06 11:03:27 INFO About to run command: /usr/bin/env python third_party.a2c_ppo_acktr.main_gail_dyn_ppo.py --batch_size=2 --learning_rate=7.021749787695342e-05 --optimizer=adam
+2022-08-06 11:03:57 INFO Running runs: []
+2022-08-06 11:03:58 INFO Agent received command: run
+2022-08-06 11:03:58 INFO Agent starting run with config:
+	batch_size: 20
+	learning_rate: 0.0009370643255499342
+	optimizer: adam
+2022-08-06 11:03:58 INFO About to run command: /usr/bin/env python third_party/a2c_ppo_acktr/main_gail_dyn_ppo.py --batch_size=20 --learning_rate=0.0009370643255499342 --optimizer=adam
+2022-08-06 11:04:03 INFO Running runs: ['d66isb7d']
+2022-08-06 11:04:03 INFO Cleaning up finished run: d66isb7d
+2022-08-06 11:04:04 INFO Agent received command: run
+2022-08-06 11:04:04 INFO Agent starting run with config:
+	batch_size: 2
+	learning_rate: 0.0003975554666239402
+	optimizer: adam
+2022-08-06 11:04:04 INFO About to run command: /usr/bin/env python third_party/a2c_ppo_acktr/main_gail_dyn_ppo.py --batch_size=2 --learning_rate=0.0003975554666239402 --optimizer=adam
