@@ -20,6 +20,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
 
+from ast import Num
 from cProfile import label
 import os
 import time
@@ -46,6 +47,7 @@ import matplotlib.pyplot as plt
 
 import logging
 import sys
+import pdb
 
 TRAJECTORY_LOAD_PATH1="./trajs"
 # TRAJECTORY_LOAD_PATH1="./data/data/"
@@ -59,16 +61,17 @@ SEED = np.random.random()
 NUM_MINI_BATCH = 16
 ENTROPY_COEF = 0
 LR = 5*1e-8
-GAIL_DIS_HDIM = 64
+GAIL_DIS_HDIM = 128
 GAIL_TRAJ_NUM = 10
 GAIL_DOWNSAMPLE_FREQUENCY = 1
 GAIL_EPOCH = 5
-NUM_STEPS = 20
+PPO_EPOCH = 100
+NUM_STEPS = 12*12
 NUM_PROCESSES = 1
-NUM_ENV_STEPS = 500
-NUM_EPISODES = 50
+NUM_ENV_STEPS = 10000
+NUM_EPISODES = 120*48
 CUDA = 1
-TEST_NUM_STEPS = 20
+TEST_NUM_STEPS = 100
 TEST_NUM_TRAJS = 100
 
 import pybullet as p
@@ -81,6 +84,7 @@ import wandb
 
 from third_party.gym_pybullet_drones.utils.enums import DroneModel, Physics
 from third_party.gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
+# from third_party.gym
 from third_party.gym_pybullet_drones.envs.VisionAviary import VisionAviary
 from third_party.gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
 from third_party.gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
@@ -96,13 +100,13 @@ np.set_printoptions(precision=2, suppress=None, threshold=sys.maxsize)
 def main():
 
     DEFAULT_DRONES = DroneModel("cf2x")
-    DEFAULT_NUM_DRONES = 3
+    DEFAULT_NUM_DRONES = 1
     DEFAULT_PHYSICS = Physics("pyb")
     DEFAULT_VISION = False
     DEFAULT_GUI = True
     DEFAULT_RECORD_VISION = False
     DEFAULT_PLOT = True
-    DEFAULT_USER_DEBUG_GUI = False
+    DEFAULT_USER_DEBUG_GUI = True
     DEFAULT_AGGREGATE = True
     DEFAULT_OBSTACLES = True
     DEFAULT_SIMULATION_FREQ_HZ = 240
@@ -132,16 +136,15 @@ def main():
     H = .1
     H_STEP = .05
     R = .3
-    INIT_XYZS = np.array([[R*np.cos((i/6)*2*np.pi+np.pi/2), R*np.sin((i/6)*2*np.pi+np.pi/2)-R, H+i*H_STEP] for i in range(DEFAULT_NUM_DRONES)])
-    INIT_RPYS = np.array([[0, 0,  i * (np.pi/2)/DEFAULT_NUM_DRONES] for i in range(DEFAULT_NUM_DRONES)])
+    INIT_XYZS = np.array([[0,0,0.1] for i in range(DEFAULT_NUM_DRONES)])
+    INIT_RPYS = np.array([[0.1, 0.1,  i * (np.pi/2)/DEFAULT_NUM_DRONES] for i in range(DEFAULT_NUM_DRONES)])
     AGGR_PHY_STEPS = int(DEFAULT_SIMULATION_FREQ_HZ/DEFAULT_CONTROL_FREQ_HZ) if DEFAULT_AGGREGATE else 1
-
     #### Initialize a circular trajectory ######################
      
-    NUM_WP = DEFAULT_CONTROL_FREQ_HZ*20
+    NUM_WP =  int(np.random.uniform(1500, 2500))
     TARGET_POS = np.zeros((NUM_WP,3))
     for i in range(NUM_WP):
-        TARGET_POS[i, :] = R*np.cos((i/NUM_WP)*(2*np.pi)+np.pi/2)+INIT_XYZS[0, 0], R*np.sin((i/NUM_WP)*(2*np.pi)+np.pi/2)-R+INIT_XYZS[0, 1], 0
+        TARGET_POS[i, :] = R*np.cos((i/NUM_WP)*(2*np.pi)+np.pi/2)+INIT_XYZS[0, 0], R*np.sin((i/NUM_WP)*(2*np.pi)+np.pi/2)-R+INIT_XYZS[0, 1], 5
     wp_counters = np.array([int((i*NUM_WP/6)%NUM_WP) for i in range(DEFAULT_NUM_DRONES)])
 
     env = CtrlAviary(drone_model=DEFAULT_DRONES,
@@ -169,10 +172,10 @@ def main():
                     )
 
     #### Initialize the controllers ############################
-    if DEFAULT_DRONES in [DroneModel.CF2X, DroneModel.CF2P]:
-        ctrl = [DSLPIDControl(drone_model=DEFAULT_DRONES) for i in range(DEFAULT_NUM_DRONES)]
-    elif DEFAULT_DRONES in [DroneModel.HB]:
-        ctrl = [SimplePIDControl(drone_model=DEFAULT_DRONES) for i in range(DEFAULT_NUM_DRONES)]
+    # if DEFAULT_DRONES in [DroneModel.CF2X, DroneModel.CF2P]:
+    ctrl = [DSLPIDControl(drone_model=DEFAULT_DRONES) for i in range(DEFAULT_NUM_DRONES)]
+    # elif DEFAULT_DRONES in [DroneModel.HB]:
+        # ctrl = [SimplePIDControl(drone_model=DEFAULT_DRONES) for i in range(DEFAULT_NUM_DRONES)]
     
     sasdata = sasdata[:-1]
     print(np.shape(sasdata))
@@ -193,7 +196,7 @@ def main():
     device = torch.device("cuda:0" if CUDA else "cpu")
     Tensor = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
 
-    actor_critic = SplitPolicy(24, 4)
+    actor_critic = SplitPolicy(20, 4)
     actor_critic.to(device)
 
     log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
@@ -207,7 +210,7 @@ def main():
     agent = algo.PPO(
             actor_critic,
             args.clip_param,
-            args.ppo_epoch,
+            PPO_EPOCH,
             NUM_MINI_BATCH,
             args.value_loss_coef,
             ENTROPY_COEF,
@@ -226,7 +229,7 @@ def main():
     s_idx = np.array([0])
     a_idx = np.array([0])
 
-    # # info_length = len(s_idx) * s_dim + len(a_idx) * a_dim + s_dim       # last term s_t+1   # 2 + 1 + 2 (S + a + S)
+    # info_length = len(s_idx) * s_dim + len(a_idx) * a_dim + s_dim       # last term s_t+1   # 2 + 1 + 2 (S + a + S)
     # Defining the Discriminator 
     discr = gail.Discriminator(
         44, GAIL_DIS_HDIM,
@@ -243,25 +246,28 @@ def main():
 
     # Creating empty object to store state,action values#################
     rollouts = RolloutStorage(NUM_STEPS, NUM_PROCESSES,
-                              24,
+                              20,
                               actor_critic.recurrent_hidden_state_size, 44)
-
+    
     #### Run the simulation ####################################
     CTRL_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ/DEFAULT_CONTROL_FREQ_HZ))
     action = {str(i): np.array([0,0,0,0]) for i in range(DEFAULT_NUM_DRONES)}
-    obs, _, _, _ = env.step(action)
-    obs = np.concatenate((obs[str(0)]['state'], action[str(0)]))
-    print("Obs")
-    print(obs)
+    # obs, _, _, _ = env.step(action, None)
+    # obs = obs[str(0)]['state']#np.concatenate((obs[str(0)]['state'], action[str(0)]))
+    # print("Obs")
+    # print(obs)
+    
 
     # reset does not have info dict, but is okay,
     # and keep rollouts.obs_feat[0] 0, will not be used, insert from 1 (for backward compact)
-    print("----------------")
-    print(np.shape(rollouts.obs[0][0]))
-    print(np.shape(obs))
-    print("----------------")
-    rollouts.obs[0].copy_(Tensor(obs))
-    rollouts.to(device)
+    # rollouts.obs[0].copy_(Tensor(obs))
+    # rollouts.to(device)
+    # print("----------------")
+    # print((rollouts.obs[0][0]))
+    # print((obs))
+    # print("----------------")
+    # rollouts.obs[0].copy_(Tensor(obs))
+    # rollouts.to(device)
 
     episode_rewards = deque(maxlen=10000)
     gail_rewards = deque(maxlen=10)  # this is just a moving average filter
@@ -312,8 +318,30 @@ def main():
 
         print("Starting Simulating trajs.")
 
-        for step in range(0, NUM_STEPS, AGGR_PHY_STEPS):
-        # for step in range(NUM_STEPS):
+        TARGET_POS = np.zeros((NUM_WP,3))
+        R = np.random.uniform(5,25)
+        for i in range(NUM_WP):
+            TARGET_POS[i, :] = R*np.cos((i/NUM_WP)*(2*np.pi)+np.pi/2)+INIT_XYZS[0, 0], R*np.sin((i/NUM_WP)*(2*np.pi)+np.pi/2)-R+INIT_XYZS[0, 1], 0
+        wp_counters = np.array([int((i*NUM_WP/6)%NUM_WP) for i in range(DEFAULT_NUM_DRONES)])
+        # prev_action = action
+
+        
+        obs = env.reset()
+        obs = obs[str(0)]['state']
+        action[str(0)], _, _ = ctrl[0].computeControlFromState(control_timestep=CTRL_EVERY_N_STEPS*env.TIMESTEP,
+                                                                    state=np.array(obs),
+                                                                    target_pos=np.hstack([TARGET_POS[wp_counters[0], 0:2], INIT_XYZS[0, 2]]),
+                                                                    # target_pos=INIT_XYZS[j, :] + TARGET_POS[wp_counters[j], :],
+                                                                    target_rpy=INIT_RPYS[0, :]
+                                                                    )
+        
+        rollouts.obs[0].copy_(Tensor(obs))
+        rollouts.to(device)
+        
+        for step in range(0, int(12*12)):
+            # pdb.set_trace()
+            # for step in range(NUM_STEPS):
+            
             with torch.no_grad():
                 value, env_action, action_log_prob, recurrent_hidden_states, action_logstd = actor_critic.act(
                     rollouts.obs[step], rollouts.recurrent_hidden_states[step],
@@ -322,48 +350,75 @@ def main():
             action_logstd_arr.append([np.array(action_logstd[0][0]), np.array(action_logstd[0][1])])
             done1 = 1
             done2 = 1
-            print("STATE FOR ACTION = " + str(rollouts.obs[step]))
-            action[str(0)], _, _ = ctrl[0].computeControlFromState(control_timestep=1,
-                                                                       state=np.array(rollouts.obs[step][0].cpu()),
-                                                                       target_pos=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2]]),
-                                                                       # target_pos=INIT_XYZS[j, :] + TARGET_POS[wp_counters[j], :],
-                                                                       target_rpy=INIT_RPYS[j, :]
-                                                                       )
+            # print("STATE FOR ACTION = " + str(rollouts.obs[step]))
+            print("STATE")
+            print(rollouts.obs[step])
 
-            wp_counters[0] = wp_counters[0] + 1 if wp_counters[0] < (NUM_WP-1) else 0
-            next_obs, done, info, reward = env.step(rollouts.obs[step][0][0:2], env_action)
-            next_obs = np.concatenate((next_obs[str(0)]['state'], action[str(0)]))
+            
+            # print(action)
+            # action = env._preprocessAction(action[str(0)])
+            next_obs, done, info, reward = env.step(action, env_action[0])
+            # print("NEXT OBS")
+            # print(next_obs)
+            # env.render()
+            
+            # next_obs = np.concatenate((next_obs[str(0)]['state'], action[str(0)]))
             # reward = Tensor(1) #-((leadernextstate[0] - followernextstate[0] - 20) + (leadernextstate[1] - followernextstate[1]))
-            next_state = Tensor(next_obs[0:24].cuda())
-            next_obs = Tensor(next_obs).cuda()
-            paramsarr.append(action.cpu().numpy())
+            # next_state = Tensor(next_obs[0:20]).cuda()
+            next_obs = Tensor(next_obs[str(0)]['state']).cuda()
+            paramsarr.append(env_action.cpu().numpy())
+            # print(rollouts.obs[step][0])
+            # print("-------")
+            # print(action[str(0)])
 
-            sas_feat = torch.cat((rollouts.obs[step], next_state[:,0])) #Tensor(np.concatenate(np.array(obs),np.array(next_state)))
-            if (next_state[0] < 15 and next_state[0] > -15) and np.abs(next_obs[2].cpu().numpy()) < 30:
+            sas_feat = torch.cat((rollouts.obs[step][0], Tensor(action[str(0)]), next_obs[0:20])) #Tensor(np.concatenate(np.array(obs),np.array(next_state)))
+            if (next_obs[2] < 10 and next_obs[2] > 1):
                 done1 = 0
-            if (next_state[1] < 15 and next_state[1] > -15) and np.abs(next_obs[2].cpu().numpy()) < 30:
+            if np.linalg.norm([next_obs[10],next_obs[11], next_obs[12]], 2 ) < 15:
                 done2 = 0
 
             masks = Tensor(
                 [done1, done2])
             bad_masks = Tensor(
                 [1.0, 1.0])
-            rollouts.insert(next_obs, recurrent_hidden_states, action,
-                            action_log_prob, value, reward, masks, bad_masks, Tensor(sas_feat))
+            # print("rewards")
+            # print(reward)
 
+            rollouts.insert(next_obs, recurrent_hidden_states, env_action,
+                            action_log_prob, value, Tensor([reward["answer"]]), masks, bad_masks, Tensor(sas_feat))
+            # pdb.set_trace()
+            wp_counters[0] = wp_counters[0] + 1 if wp_counters[0] < (NUM_WP-1) else 0
+            action[str(0)], _, _ = ctrl[0].computeControlFromState(control_timestep=CTRL_EVERY_N_STEPS*env.TIMESTEP,
+                                                                    state=np.array(next_obs),
+                                                                    target_pos=np.hstack([TARGET_POS[wp_counters[0], 0:2], INIT_XYZS[0, 2]]),
+                                                                    # target_pos=INIT_XYZS[j, :] + TARGET_POS[wp_counters[j], :],
+                                                                    target_rpy=INIT_RPYS[0, :]
+                                                                    )
+            print("ACTION HERE")
+            print(action)
+            # p.stepSimulation()
+            # pdb.set_trace()
+            # prev_action = action
         print("Ended Simulating trajs")
         # mainerrorarr.append(np.mean(errorcxexpert))
         # avgparamerror.append(np.mean(np.abs(paramsarr)))
         with torch.no_grad():
             next_value = actor_critic.get_value(
-                rollouts.obs[-1][0], rollouts.recurrent_hidden_states[-1],
+                rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
                 rollouts.masks[-1]).detach()
 
         gail_loss, gail_loss_e, gail_loss_p = None, None, None
         gail_epoch = GAIL_EPOCH
-        
+
+        print("ACTOR CRITIC value found")
+        print(next_value) 
         # x1arr = []
         # x2arr = []
+        print("GAIL TRAIN LOADER")
+        print(gail_train_loader)
+        print("============================")
+        print("ROLLOUTS")
+        print(rollouts)
 
         for _ in range(gail_epoch):
             gail_loss, gail_loss_e, gail_loss_p, gen_loss, merror, verror = discr.update_gail_dyn(gail_train_loader, rollouts)
@@ -378,6 +433,7 @@ def main():
             genloss.append(gen_loss)
         
         
+        print("GAIL dynamics updated")
         # gailloss.append(gail_loss)
         # avgparamerror1.append(np.mean(x1arr))
         # avgparamerror2.append(np.mean(x2arr))
@@ -547,100 +603,100 @@ def main():
     expertstepcxarr = np.zeros((TEST_NUM_STEPS, TEST_NUM_TRAJS, 2))
     finalnormederrors = np.zeros((TEST_NUM_STEPS,2))
 
-    for k in range(TEST_NUM_TRAJS):
-        obs = Tensor(system.generate_initial_obs())
-        print("Initial Obs = " + str(obs))
+    # for k in range(TEST_NUM_TRAJS):
+    #     # obs = Tensor(system.generate_initial_obs())
+    #     print("Initial Obs = " + str(obs))
 
-        experttraj = np.zeros((TEST_NUM_STEPS, 3))
-        controlinputs = []
+    #     experttraj = np.zeros((TEST_NUM_STEPS, 3))
+    #     controlinputs = []
 
-        # Generating Expert Trajectory
-        initialobs = obs.cpu()
-        for step in range(TEST_NUM_STEPS):
-            experttraj[step] = np.array(initialobs)
-            initialstate = (initialobs[0:2])
-            initialstate = torch.Tensor(initialstate).cuda()
-            next_state, next_obs, cxexpert = system.step(initialstate, None)
-            # print("ACTION = " + str(next_obs[2]))
-            expertcxarray.append([float(cxexpert[0,0]), float(cxexpert[0,1])])
-            controlinputs.append(np.array(initialobs[2]))
-            # expertstepcxarr[step,k] = np.array(cxexpert)
-            initialobs = next_obs
-        expertstepcxarr[:,k,0] = experttraj[:,0]
-        expertstepcxarr[:,k,1] = experttraj[:,1]
-        simulatedtraj = np.zeros((TEST_NUM_STEPS, 3))
+    #     # Generating Expert Trajectory
+    #     initialobs = obs.cpu()
+    #     for step in range(TEST_NUM_STEPS):
+    #         experttraj[step] = np.array(initialobs)
+    #         initialstate = (initialobs[0:2])
+    #         initialstate = torch.Tensor(initialstate).cuda()
+    #         next_state, next_obs, cxexpert = system.step(initialstate, None)
+    #         # print("ACTION = " + str(next_obs[2]))
+    #         expertcxarray.append([float(cxexpert[0,0]), float(cxexpert[0,1])])
+    #         controlinputs.append(np.array(initialobs[2]))
+    #         # expertstepcxarr[step,k] = np.array(cxexpert)
+    #         initialobs = next_obs
+    #     expertstepcxarr[:,k,0] = experttraj[:,0]
+    #     expertstepcxarr[:,k,1] = experttraj[:,1]
+    #     simulatedtraj = np.zeros((TEST_NUM_STEPS, 3))
 
-        print("Done with the Expert Trajectories")
-        # Generating Simulated Trajectory
-        initialobs = obs.cpu()
-        initialobs = Tensor(initialobs.to(device='cuda'))
-        for step in range(TEST_NUM_STEPS):
-            simulatedtraj[step] = np.array(initialobs.cpu())
-            initialstate = (initialobs[0:2])
-            value, action, _, _, _ = actor_critic.act(
-                        initialobs, GAIL_DIS_HDIM,
-                        np.array([False, False]))
-            action = action[np.newaxis, :]
-            print("HERE = " + str(controlinputs[step]))
-            # next_state, next_obs, cxsimulated = system.step_with_predefined_actions(initialstate, controlinputs[step], action)
-            next_state, next_obs, cxsimulated = system.step(initialstate, action)
-            simulatedcxarray.append([float(cxsimulated[0,0]), float(cxsimulated[0,1])])
-            simulatedstepcxarr[step,k] = np.array(cxsimulated)
-            initialobs = Tensor(next_obs)
-        simulatedstepcxarr[:,k,0] = simulatedtraj[:,0]
-        simulatedstepcxarr[:,k,1] = simulatedtraj[:,1]
+    #     print("Done with the Expert Trajectories")
+    #     # Generating Simulated Trajectory
+    #     initialobs = obs.cpu()
+    #     initialobs = Tensor(initialobs.to(device='cuda'))
+    #     for step in range(TEST_NUM_STEPS):
+    #         simulatedtraj[step] = np.array(initialobs.cpu())
+    #         initialstate = (initialobs[0:2])
+    #         value, action, _, _, _ = actor_critic.act(
+    #                     initialobs, GAIL_DIS_HDIM,
+    #                     np.array([False, False]))
+    #         action = action[np.newaxis, :]
+    #         print("HERE = " + str(controlinputs[step]))
+    #         # next_state, next_obs, cxsimulated = system.step_with_predefined_actions(initialstate, controlinputs[step], action)
+    #         next_state, next_obs, cxsimulated = system.step(initialstate, action)
+    #         simulatedcxarray.append([float(cxsimulated[0,0]), float(cxsimulated[0,1])])
+    #         simulatedstepcxarr[step,k] = np.array(cxsimulated)
+    #         initialobs = Tensor(next_obs)
+    #     simulatedstepcxarr[:,k,0] = simulatedtraj[:,0]
+    #     simulatedstepcxarr[:,k,1] = simulatedtraj[:,1]
 
-        #Calculating difference in the trajectory states and trajectory actions
-        trajerror = simulatedtraj - experttraj
-        statenorm1 = np.linalg.norm((trajerror[:,0]), 2)/TEST_NUM_STEPS
-        statenorm2 = np.linalg.norm((trajerror[:,1]), 2)/TEST_NUM_STEPS
-        statenorm = np.linalg.norm((trajerror[:,0:2]), 2)/TEST_NUM_STEPS
-        actionnorm = np.linalg.norm(trajerror[:,2], 2)/TEST_NUM_STEPS
+    #     #Calculating difference in the trajectory states and trajectory actions
+    #     trajerror = simulatedtraj - experttraj
+    #     statenorm1 = np.linalg.norm((trajerror[:,0]), 2)/TEST_NUM_STEPS
+    #     statenorm2 = np.linalg.norm((trajerror[:,1]), 2)/TEST_NUM_STEPS
+    #     statenorm = np.linalg.norm((trajerror[:,0:2]), 2)/TEST_NUM_STEPS
+    #     actionnorm = np.linalg.norm(trajerror[:,2], 2)/TEST_NUM_STEPS
 
-        stateerrorarr1.append(statenorm1)
-        stateerrorarr2.append(statenorm2)
-        actionerrorarr.append(actionnorm)
+    #     stateerrorarr1.append(statenorm1)
+    #     stateerrorarr2.append(statenorm2)
+    #     actionerrorarr.append(actionnorm)
 
         
-        # errorstepcxmeans = np.mean(errorstepcxarr, axis=1 )
-        # print("SHAPE = " + str(np.shape(errorstepcxmeans)))
-        # axs[1][3].plot(errorstepcxmeans[:,0], color='red', label='X1')
-        # axs[1][3].plot
-        # axs[1][3].plot(errorstepcxmeans[:,1], color='blue', label='X2')
+    #     # errorstepcxmeans = np.mean(errorstepcxarr, axis=1 )
+    #     # print("SHAPE = " + str(np.shape(errorstepcxmeans)))
+    #     # axs[1][3].plot(errorstepcxmeans[:,0], color='red', label='X1')
+    #     # axs[1][3].plot
+    #     # axs[1][3].plot(errorstepcxmeans[:,1], color='blue', label='X2')
 
-        axs[0][1].cla()
-        axs[0][1].set_title("SIM. Vs. EXP. TRAJ.")
-        axs[0][1].plot(simulatedtraj[:,1], color='red', label='Simulated Traj')
-        axs[0][1].plot(experttraj[:,1],color='blue', label="Expert Traj" )
-        # wandb.log({'traj_num':k, 'simulated': np.array(simulatedtraj[:,1]), 'expert' : np.array(experttraj[:,1])})
+    #     axs[0][1].cla()
+    #     axs[0][1].set_title("SIM. Vs. EXP. TRAJ.")
+    #     axs[0][1].plot(simulatedtraj[:,1], color='red', label='Simulated Traj')
+    #     axs[0][1].plot(experttraj[:,1],color='blue', label="Expert Traj" )
+    #     # wandb.log({'traj_num':k, 'simulated': np.array(simulatedtraj[:,1]), 'expert' : np.array(experttraj[:,1])})
 
-        plt.pause(0.005)
-    errorstepcxarr = expertstepcxarr - simulatedstepcxarr
-    for step in range(TEST_NUM_STEPS):
-        finalnormederrors[step, 0] = np.linalg.norm(errorstepcxarr[step], 2)
-        finalnormederrors[step, 1] = np.var(errorstepcxarr[step])
-    axs[1][3].set_ylim((2.5,8.0))
-    axs[1][3].errorbar(np.arange(0,TEST_NUM_STEPS),finalnormederrors[:,0], yerr=finalnormederrors[:,1], linestyle='-', marker='^' )
-    # axs[1][3].plot(np.arange(0,TEST_NUM_STEPS),finalnormederrors[:,0])
-    axs[0][2].set_title("x1 and x2 ERR. (Sim. vs. Exp.")
-    axs[0][2].boxplot([stateerrorarr1, stateerrorarr2])
-    # wandb.log({'X1 traj error': stateerrorarr1, 'X2 traj error' : stateerrorarr2})
+    #     plt.pause(0.005)
+    # errorstepcxarr = expertstepcxarr - simulatedstepcxarr
+    # for step in range(TEST_NUM_STEPS):
+    #     finalnormederrors[step, 0] = np.linalg.norm(errorstepcxarr[step], 2)
+    #     finalnormederrors[step, 1] = np.var(errorstepcxarr[step])
+    # axs[1][3].set_ylim((2.5,8.0))
+    # axs[1][3].errorbar(np.arange(0,TEST_NUM_STEPS),finalnormederrors[:,0], yerr=finalnormederrors[:,1], linestyle='-', marker='^' )
+    # # axs[1][3].plot(np.arange(0,TEST_NUM_STEPS),finalnormederrors[:,0])
+    # axs[0][2].set_title("x1 and x2 ERR. (Sim. vs. Exp.")
+    # axs[0][2].boxplot([stateerrorarr1, stateerrorarr2])
+    # # wandb.log({'X1 traj error': stateerrorarr1, 'X2 traj error' : stateerrorarr2})
 
-    # axs[0][3].set_title("Mean Err. - Distr. (Sim. vs. Exp.)")
-    # axs[1][3].set_title("Mean and Var. of CX error at timestep")
-    merrorarr = np.array(merrorarr)
-    verrorarr = np.array(verrorarr)
-    # print(merrorarr)
-    # print(verrorarr)
-    # axs[0][3].boxplot(merrorarr)
-    axs[1][2].set_title("Error in CX for X1 & X2")
-    axs[1][2].boxplot([np.array(expertcxarray)[:,0] - np.array(simulatedcxarray)[:,0], np.array(expertcxarray)[:,1] - np.array(simulatedcxarray)[:,1]])
-    # wandb.log({'Cx error (X1)':np.array(expertcxarray)[:,0] - np.array(simulatedcxarray)[:,0], 'Cx error (X2)': np.array(expertcxarray)[:,1] - np.array(simulatedcxarray)[:,1]})
+    # # axs[0][3].set_title("Mean Err. - Distr. (Sim. vs. Exp.)")
+    # # axs[1][3].set_title("Mean and Var. of CX error at timestep")
+    # merrorarr = np.array(merrorarr)
+    # verrorarr = np.array(verrorarr)
+    # # print(merrorarr)
+    # # print(verrorarr)
+    # # axs[0][3].boxplot(merrorarr)
+    # axs[1][2].set_title("Error in CX for X1 & X2")
+    # axs[1][2].boxplot([np.array(expertcxarray)[:,0] - np.array(simulatedcxarray)[:,0], np.array(expertcxarray)[:,1] - np.array(simulatedcxarray)[:,1]])
+    # # wandb.log({'Cx error (X1)':np.array(expertcxarray)[:,0] - np.array(simulatedcxarray)[:,0], 'Cx error (X2)': np.array(expertcxarray)[:,1] - np.array(simulatedcxarray)[:,1]})
 
-    plt.legend()
-    plt.autoscale() 
-    plt.show()
-    # wandb.finish()
+    # plt.legend()
+    # plt.autoscale() 
+    # plt.show()
+    # # wandb.finish()
 
 
 if __name__ == "__main__":

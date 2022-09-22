@@ -171,7 +171,13 @@ class Discriminator(nn.Module):
             expert_data = expert_batch[0]
             # print("YE SIZE CHAHIYE = " + str(np.shape(expert_data)))
             policy_data = policy_batch[-2]      # see feed_forward_generator yield
-            print(expert_data, policy_data)
+            # print(expert_data, policy_data)
+
+            print("GAIL TRAIN LOADER")
+            print(expert_data)
+            print("============================")
+            print("ROLLOUTS")
+            print(policy_data)
 
             # expertvarmean = torch.var_mean(expert_data)
             # policyvarmean = torch.var_mean(policy_data)
@@ -190,8 +196,8 @@ class Discriminator(nn.Module):
 
             policy_d = self.trunk(policy_data)
             expert_d = self.trunk(expert_data)
-            print("POLICY_D = " +str(policy_d))
-            print("EXPERT_D = " +str(expert_d))
+            # print("POLICY_D = " +str(policy_d))
+            # print("EXPERT_D = " +str(expert_d))
 
             expert_loss = F.binary_cross_entropy_with_logits(
                 expert_d,

@@ -32,6 +32,8 @@ class RolloutStorage(object):
     def __init__(self, num_steps, num_processes, obs_shape,
                  recurrent_hidden_state_size, feat_len=0):
         self.obs = torch.zeros(num_steps + 1, int(num_processes), obs_shape)
+        for i in range(num_steps):
+            self.obs[i,0,6] = 1
         self.obs_feat = torch.zeros(num_steps + 1, int(num_processes), feat_len)
         self.recurrent_hidden_states = torch.zeros(
             num_steps + 1, int(num_processes), recurrent_hidden_state_size)
@@ -39,7 +41,7 @@ class RolloutStorage(object):
         self.value_preds = torch.zeros(num_steps + 1, int(num_processes), 2)
         self.returns = torch.zeros(num_steps + 1, int(num_processes), 2)
         self.action_log_probs = torch.zeros(num_steps, int(num_processes), 2)
-        self.action_shape = 2
+        self.action_shape = 8
         # if action_space.__class__.__name__ == 'Discrete':
         #     action_shape = 1
         # else:

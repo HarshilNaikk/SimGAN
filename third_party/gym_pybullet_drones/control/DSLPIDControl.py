@@ -5,6 +5,7 @@ from scipy.spatial.transform import Rotation
 
 from third_party.gym_pybullet_drones.control.BaseControl import BaseControl
 from third_party.gym_pybullet_drones.utils.enums import DroneModel
+import pdb
 
 class DSLPIDControl(BaseControl):
     """PID control class for Crazyflies.
@@ -117,8 +118,8 @@ class DSLPIDControl(BaseControl):
 
         """
         self.control_counter += 1
-        print("THIS SHOULD BE RIGHT ")
-        print(cur_quat)
+        # print("THIS SHOULD BE RIGHT ")
+        # print(cur_quat)
         thrust, computed_target_rpy, pos_e = self._dslPIDPositionControl(control_timestep,
                                                                          cur_pos,
                                                                          cur_quat,
@@ -134,6 +135,11 @@ class DSLPIDControl(BaseControl):
                                           target_rpy_rates
                                           )
         cur_rpy = p.getEulerFromQuaternion(cur_quat)
+        print("This is the current position")
+        print(cur_pos)
+        print("This is the position error")
+        print(pos_e)
+        # pdb.set_trace()
         return rpm, pos_e, computed_target_rpy[2] - cur_rpy[2]
     
     ################################################################################
@@ -176,8 +182,8 @@ class DSLPIDControl(BaseControl):
             The current position error.
 
         """
-        print("THIS SHOULD BE RIGHT ")
-        print(cur_quat)
+        # print("THIS SHOULD BE RIGHT ")
+        # print(cur_quat)
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         pos_e = target_pos - cur_pos
         vel_e = target_vel - cur_vel
@@ -199,6 +205,7 @@ class DSLPIDControl(BaseControl):
         target_euler = (Rotation.from_matrix(target_rotation)).as_euler('XYZ', degrees=False)
         if np.any(np.abs(target_euler) > math.pi):
             print("\n[ERROR] ctrl it", self.control_counter, "in Control._dslPIDPositionControl(), values outside range [-pi,pi]")
+        # pdb.set_trace()
         return thrust, target_euler, pos_e
     
     ################################################################################

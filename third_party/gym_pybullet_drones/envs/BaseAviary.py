@@ -12,7 +12,7 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 import gym
-from gym_pybullet_drones.utils.enums import DroneModel, Physics, ImageType
+from third_party.gym_pybullet_drones.utils.enums import DroneModel, Physics, ImageType
 
 
 
@@ -246,7 +246,7 @@ class BaseAviary(gym.Env):
 
     def step(self,
              action,
-             env_action
+             env_action=None
              ):
         """Advances the environment by one simulation step.
 
@@ -342,7 +342,7 @@ class BaseAviary(gym.Env):
                     self._drag(self.last_clipped_action[i, :], i)
                     self._downwash(i)
             #### PyBullet computes the new state, unless Physics.DYN ###
-            battery_levels = self.set_con_coeff_and_return_battery_level(env_action)
+            # battery_levels = self.set_con_coeff_and_return_battery_level(env_action)
             if self.PHYSICS != Physics.DYN:
                 p.stepSimulation(physicsClientId=self.CLIENT)
             #### Save the last applied action (e.g. to compute drag) ###
@@ -357,6 +357,21 @@ class BaseAviary(gym.Env):
         info = self._computeInfo()
         #### Advance the step counter ##############################
         self.step_counter = self.step_counter + (1 * self.AGGR_PHY_STEPS)
+
+        if env_action != None:
+            this_fric = np.tanh(env_action)   # [-1 ,1]
+
+            this_fric[0:2] = (this_fric[0:2] + 1) / 2.0 * 5.0     # 0 ~ 5, lateral & spin Fric
+            this_fric[2] = (this_fric[2] + 1) / 2.0 * 15.0       # 0 ~ 10, restitution
+            this_fric[3] = (this_fric[3] + 1) / 2.0 * 2.0 + 1.0        # 1 ~ 3, log (damping/2)
+            this_fric[3] = np.exp(this_fric[3]) * 2                     # 20 ~ 2000, damping
+
+            # print(this_fric)
+
+            p.changeDynamics(self.DRONE_IDS[0], 5,
+                                lateralFriction=this_fric[0], spinningFriction=this_fric[1],
+                                contactDamping=this_fric[3], contactStiffness=1.0)
+
         return obs, reward, done, info
     
     ################################################################################

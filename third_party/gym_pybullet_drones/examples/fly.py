@@ -35,7 +35,7 @@ from gym_pybullet_drones.utils.Logger import Logger
 from gym_pybullet_drones.utils.utils import sync, str2bool
 
 DEFAULT_DRONES = DroneModel("cf2x")
-DEFAULT_NUM_DRONES = 3
+DEFAULT_NUM_DRONES = 1
 DEFAULT_PHYSICS = Physics("pyb")
 DEFAULT_VISION = False
 DEFAULT_GUI = True
@@ -159,23 +159,23 @@ def run(
         # if i/env.SIM_FREQ>5 and i%10==0 and i/env.SIM_FREQ<10: p.loadURDF("duck_vhacd.urdf", [0+random.gauss(0, 0.3),-0.5+random.gauss(0, 0.3),3], p.getQuaternionFromEuler([random.randint(0,360),random.randint(0,360),random.randint(0,360)]), physicsClientId=PYB_CLIENT)
 
         #### Step the simulation ###################################
-        obs, reward, done, info = env.step(action)
+        # obs, reward, done, info = env.step(action)
 
         #### Compute control at the desired frequency ##############
-        if i%CTRL_EVERY_N_STEPS == 0:
+        # if i%CTRL_EVERY_N_STEPS == 0:
 
-            #### Compute control for the current way point #############
-            for j in range(num_drones):
-                action[str(j)], _, _ = ctrl[j].computeControlFromState(control_timestep=CTRL_EVERY_N_STEPS*env.TIMESTEP,
-                                                                       state=obs[str(j)]["state"],
-                                                                       target_pos=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2]]),
-                                                                       # target_pos=INIT_XYZS[j, :] + TARGET_POS[wp_counters[j], :],
-                                                                       target_rpy=INIT_RPYS[j, :]
-                                                                       )
+        #### Compute control for the current way point #############
+        for j in range(num_drones):
+            action[str(j)], _, _ = ctrl[j].computeControlFromState(control_timestep=CTRL_EVERY_N_STEPS*env.TIMESTEP,
+                                                                    state=obs[str(j)]["state"],
+                                                                    target_pos=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2]]),
+                                                                    # target_pos=INIT_XYZS[j, :] + TARGET_POS[wp_counters[j], :],
+                                                                    target_rpy=INIT_RPYS[j, :]
+                                                                    )
 
-            #### Go to the next way point and loop #####################
-            for j in range(num_drones): 
-                wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP-1) else 0
+        #### Go to the next way point and loop #####################
+        for j in range(num_drones): 
+            wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP-1) else 0
 
         #### Log the simulation ####################################
         for j in range(num_drones):
@@ -187,15 +187,15 @@ def run(
                        )
 
         #### Printout ##############################################
-        if i%env.SIM_FREQ == 0:
-            env.render()
-            #### Print matrices with the images captured by each drone #
-            if vision:
-                for j in range(num_drones):
-                    print(obs[str(j)]["rgb"].shape, np.average(obs[str(j)]["rgb"]),
-                          obs[str(j)]["dep"].shape, np.average(obs[str(j)]["dep"]),
-                          obs[str(j)]["seg"].shape, np.average(obs[str(j)]["seg"])
-                          )
+        # if i%env.SIM_FREQ == 0:
+        env.render()
+        #### Print matrices with the images captured by each drone #
+        if vision:
+            for j in range(num_drones):
+                print(obs[str(j)]["rgb"].shape, np.average(obs[str(j)]["rgb"]),
+                        obs[str(j)]["dep"].shape, np.average(obs[str(j)]["dep"]),
+                        obs[str(j)]["seg"].shape, np.average(obs[str(j)]["seg"])
+                        )
 
         #### Sync the simulation ###################################
         if gui:

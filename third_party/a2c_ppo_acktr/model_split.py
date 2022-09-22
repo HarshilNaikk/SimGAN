@@ -190,10 +190,12 @@ class SplitPolicyBaseNew(nn.Module):
     def forward(self, inputs, rnn_hxs, masks):
         x = inputs
         value = self.critic_full(x)
-
+        # print(x)
         y1 = self.actor_contact(x)
         y2 = self.actor_actuator(x)
-
+        # print("HERE ARE Y1 and Y2")
+        # print(y1)
+        # print(y2)
         action_feat = torch.cat((y1,y2),1)
 
         return value, action_feat, rnn_hxs

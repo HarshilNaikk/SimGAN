@@ -24,14 +24,14 @@ import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
 
-from gym_pybullet_drones.utils.enums import DroneModel, Physics
-from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
-from gym_pybullet_drones.envs.VisionAviary import VisionAviary
-from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
-from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
-from gym_pybullet_drones.utils.Logger import Logger
-from gym_pybullet_drones.utils.utils import sync, str2bool
-
+from third_party.gym_pybullet_drones.utils.enums import DroneModel, Physics
+from third_party.gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
+from third_party.gym_pybullet_drones.envs.VisionAviary import VisionAviary
+from third_party.gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
+from third_party.gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
+from third_party.gym_pybullet_drones.utils.Logger import Logger
+from third_party.gym_pybullet_drones.utils.utils import sync, str2bool
+# third_party.
 DEFAULT_GUI = True
 DEFAULT_RECORD_VIDEO = False
 DEFAULT_PLOT = True
